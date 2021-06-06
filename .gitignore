@@ -1,0 +1,28 @@
+# Build output
+dist
+
+# General files
+node_modules
+package-lock.json
+
+# MacOS-generated files
+.DS_Store
+
+# Yarn errors and logs
+*.log
+
+# local VSCode files
+.history
+
+# vscode setings
+.vscode/
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Exception for extension recommendations
+!.vscode/extensions.json
+
+.idea
+
+test
