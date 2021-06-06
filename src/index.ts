@@ -1,7 +1,6 @@
 import axios from "axios";
 import * as stream from "stream";
 import {client as WebSocketClient} from "websocket";
-import * as vader from "vader-sentiment";
 import {randomBytes} from "crypto";
 import OUTPUT_FORMATS from "./OUTPUT_FORMAT";
 import OUTPUT_FORMAT from "./OUTPUT_FORMAT";
@@ -161,7 +160,7 @@ export class MsEdgeTTS {
         // https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup
         const request = `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
                 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._voiceLang}">
-                    <voice name="en-US-AriaNeural">
+                    <voice name="${this._voice}">
                         ${input}
                     </voice>
                 </speak>
