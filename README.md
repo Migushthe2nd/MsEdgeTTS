@@ -12,6 +12,7 @@ Full support for SSML, however, the following is the default SSML object:
 ```
 
 Documentation on the SSML format [can be found here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup).
+All supported audio formats [can be found here](./src/OUTPUT_FORMAT.ts).
 
 ## Example usage
 
