@@ -22,7 +22,7 @@ All supported audio formats [can be found here](./src/OUTPUT_FORMAT.ts).
 import {MsEdgeTTS} from "msedge-tts";
 
 const tts = new MsEdgeTTS();
-await tts.setMetadata("en-US-AriaNeural", MsEdgeTTS.OUTPUT_FORMATS.WEBM_24KHZ_16BIT_MONO_OPUS);
+await tts.setMetadata("en-IE-ConnorNeural", MsEdgeTTS.OUTPUT_FORMATS.WEBM_24KHZ_16BIT_MONO_OPUS);
 const readable = tts.toStream("Hi, how are you?");
 
 readable.on("data", (data) => {
