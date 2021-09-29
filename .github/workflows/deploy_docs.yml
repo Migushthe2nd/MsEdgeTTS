@@ -1,0 +1,29 @@
+name: Deploy Docs
+on: [push, pull_request]
+
+jobs:
+  build_and_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Test to see if the project compiles
+        run: yarn run build
+
+      - name: Build the docs
+        run: npx typedoc
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: docs

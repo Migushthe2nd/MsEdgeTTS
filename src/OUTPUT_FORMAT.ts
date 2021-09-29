@@ -1,7 +1,7 @@
 /**
  * https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/rest-text-to-speech#audio-outputs
  */
-enum OUTPUT_FORMAT {
+export enum OUTPUT_FORMAT {
     RAW_16KHZ_16BIT_MONO_PCM = "raw-16khz-16bit-mono-pcm",
     RAW_24KHZ_16BIT_MONO_PCM = "raw-24khz-16bit-mono-pcm",
     RAW_48KHZ_16BIT_MONO_PCM = "raw-48khz-16bit-mono-pcm",
@@ -28,6 +28,3 @@ enum OUTPUT_FORMAT {
     OGG_24KHZ_16BIT_MONO_OPUS = "ogg-24khz-16bit-mono-opus",
     OGG_48KHZ_16BIT_MONO_OPUS = "ogg-48khz-16bit-mono-opus",
 }
-
-export default OUTPUT_FORMAT;
-
