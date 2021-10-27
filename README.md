@@ -1,4 +1,5 @@
 # MsEdgeTTS
+[![npm version](https://badge.fury.io/js/msedge-tts.svg)](https://badge.fury.io/js/msedge-tts)
 
 An Azure Speech Service module that uses the Microsoft Edge Read Aloud API.
 
