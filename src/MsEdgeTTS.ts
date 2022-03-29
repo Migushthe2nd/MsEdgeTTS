@@ -23,7 +23,7 @@ export class MsEdgeTTS {
     private static BINARY_DELIM = "Path:audio\r\n";
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
     private readonly _enableLogger;
-    private _ws;
+    private _ws: WebSocketClient;
     private _connection;
     private _voice;
     private _voiceLocale;
@@ -40,24 +40,25 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (this._ws.readyState !== this._ws.OPEN) await this._ws.connect(MsEdgeTTS.SYNTH_URL);
+        if (this._connection.state !== 'open') await this._ws.connect(MsEdgeTTS.SYNTH_URL);
         this._connection.send(message, () => {
-            if (this._enableLogger) console.log("<-", message);
+            if (this._enableLogger) console.log("<- sent message");
         });
     }
 
     private _connect() {
+        let startTime;
+        if (this._enableLogger) startTime = Date.now();
         return new Promise((resolve, reject) => {
             this._ws.on("connect", (connection) => {
                 this._connection = connection;
-                if (this._enableLogger) console.log("connected");
+                if (this._enableLogger) console.log("Connected in", (Date.now() - startTime || 0) / 1000, "seconds");
 
                 this._connection.on("close", () => {
                     if (this._enableLogger) console.log("disconnected");
                 });
 
                 this._connection.on("message", async (m) => {
-                    if (this._enableLogger) console.log("->", m);
                     if (m.type === "utf8") {
                         const data = m.utf8Data;
                         const requestId = /X-RequestId:(.*?)\r\n/gm.exec(data)[1];
@@ -143,6 +144,10 @@ export class MsEdgeTTS {
      * @param voiceLocale (optional) any voice locale that is supported by the voice. See the list of all voices for compatibility. If not provided, the locale will be inferred from the `voiceName`
      */
     async setMetadata(voiceName: string, outputFormat: OUTPUT_FORMAT, voiceLocale?: string) {
+        const oldVoice = this._voice;
+        const oldVoiceLocale = this._voiceLocale;
+        const oldOutputFormat = this._outputFormat;
+
         this._voice = voiceName;
         this._voiceLocale = voiceLocale;
         if (!this._voiceLocale) {
@@ -152,8 +157,15 @@ export class MsEdgeTTS {
         }
         this._outputFormat = outputFormat;
 
-        this._ws = new WebSocketClient();
-        await this._connect();
+        const changed = oldVoice !== this._voice
+            || oldVoiceLocale !== this._voiceLocale
+            || oldOutputFormat !== this._outputFormat;
+
+        // create new client
+        if (!this._ws || changed) {
+            this._ws = new WebSocketClient();
+            await this._connect();
+        }
     }
 
     private _metadataCheck() {
