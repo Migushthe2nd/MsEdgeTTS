@@ -29,6 +29,7 @@ export class MsEdgeTTS {
     private _voiceLocale;
     private _outputFormat;
     private _queue = {};
+    private _startTime = 0;
 
     /**
      * Create a new `MsEdgeTTS` instance.
@@ -40,19 +41,27 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (this._connection.state !== 'open') await this._ws.connect(MsEdgeTTS.SYNTH_URL);
+        if (this._connection.state !== "open") {
+            await this._connect();
+        }
         this._connection.send(message, () => {
             if (this._enableLogger) console.log("<- sent message");
         });
     }
 
     private _connect() {
-        let startTime;
-        if (this._enableLogger) startTime = Date.now();
+        if (this._enableLogger) this._startTime = Date.now();
+        this._ws.connect(MsEdgeTTS.SYNTH_URL);
+        return new Promise((resolve) => this._ws.once("connect", resolve));
+    }
+
+    private _initClient() {
+        this._ws = new WebSocketClient();
+
         return new Promise((resolve, reject) => {
             this._ws.on("connect", (connection) => {
                 this._connection = connection;
-                if (this._enableLogger) console.log("Connected in", (Date.now() - startTime || 0) / 1000, "seconds");
+                if (this._enableLogger) console.log("Connected in", (Date.now() - this._startTime) / 1000, "seconds");
 
                 this._connection.on("close", () => {
                     if (this._enableLogger) console.log("disconnected");
@@ -100,17 +109,14 @@ export class MsEdgeTTS {
                             }
                         }
                     }
-                `).then();
-                setTimeout(() => {
-                    resolve(undefined);
-                }, 500);
+                `).then(resolve);
             });
 
             this._ws.on("connectFailed", function (error) {
                 reject("Connect Error: " + error);
             });
 
-            this._ws.connect(MsEdgeTTS.SYNTH_URL);
+            this._connect();
         });
     }
 
@@ -163,8 +169,7 @@ export class MsEdgeTTS {
 
         // create new client
         if (!this._ws || changed) {
-            this._ws = new WebSocketClient();
-            await this._connect();
+            await this._initClient();
         }
     }
 
