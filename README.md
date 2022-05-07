@@ -24,10 +24,10 @@ format [can be found here](https://docs.microsoft.com/en-us/azure/cognitive-serv
 ### Write to Stream
 
 ```js
-import {MsEdgeTTS} from "msedge-tts";
+import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 
 const tts = new MsEdgeTTS();
-await tts.setMetadata("en-IE-ConnorNeural", MsEdgeTTS.OUTPUT_FORMATS.WEBM_24KHZ_16BIT_MONO_OPUS);
+await tts.setMetadata("en-IE-ConnorNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
 const readable = tts.toStream("Hi, how are you?");
 
 readable.on("data", (data) => {
@@ -43,11 +43,11 @@ readable.on("closed", () => {
 ### Write to File
 
 ```js
-import {MsEdgeTTS} from "msedge-tts";
+import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 
 (async () => {
     const tts = new MsEdgeTTS();
-    await tts.setMetadata("en-US-AriaNeural", MsEdgeTTS.OUTPUT_FORMATS.WEBM_24KHZ_16BIT_MONO_OPUS);
+    await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
     const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");  
 })
 ```
