@@ -1,7 +1,7 @@
 # MsEdgeTTS
 [![npm version](https://badge.fury.io/js/msedge-tts.svg)](https://badge.fury.io/js/msedge-tts)
 
-An Azure Speech Service module that uses the Microsoft Edge Read Aloud API.
+An simple Azure Speech Service module that uses the Microsoft Edge Read Aloud API.
 
 Full support for SSML, however, the following is the default SSML object:
 
