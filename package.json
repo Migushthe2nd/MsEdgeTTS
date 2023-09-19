@@ -17,13 +17,11 @@
     "devDependencies": {
         "@types/node": "^15.12.1",
         "@types/ws": "^8.5.5",
-        "ts-node": "^10.9.1",
         "typedoc": "^0.22.2",
         "typescript": "^4.3.2"
     },
     "dependencies": {
         "axios": "^0.21.1",
-        "socks-proxy-agent": "^8.0.2",
         "ws": "^8.14.1"
     },
     "files": [

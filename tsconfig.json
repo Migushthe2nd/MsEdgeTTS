@@ -1,15 +1,17 @@
 {
     "include": [
-        "src/**/*",
+        "src/**/*"
     ],
     "compilerOptions": {
-        "lib": ["es2017"],
         "moduleResolution": "node",
         "module": "commonjs",
         "target": "ES6",
         "declaration": true,
-        "outDir": "dist",
-        "sourceMap": true,
-        "skipLibCheck": true
+        "outDir": "dist"
+    },
+    "typedocOptions": {
+        "entryPoints": ["src/index.ts"],
+        "out": "docs",
+        "excludePrivate": true
     }
 }
