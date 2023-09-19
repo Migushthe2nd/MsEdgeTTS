@@ -3,6 +3,7 @@
         "src/**/*",
     ],
     "compilerOptions": {
+        "lib": ["es2017"],
         "moduleResolution": "node",
         "module": "commonjs",
         "target": "ES6",
