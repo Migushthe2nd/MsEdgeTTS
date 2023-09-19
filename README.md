@@ -52,6 +52,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 })
 ```
 ### Use Agent
+Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
 ```js
 import {SocksProxyAgent} from 'socks-proxy-agent';
 
