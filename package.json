@@ -16,7 +16,6 @@
     },
     "devDependencies": {
         "@types/node": "^15.12.1",
-        "@types/websocket": "^1.0.6",
         "@types/ws": "^8.5.5",
         "ts-node": "^10.9.1",
         "typedoc": "^0.22.2",
@@ -24,7 +23,6 @@
     },
     "dependencies": {
         "axios": "^0.21.1",
-        "websocket": "^1.0.34",
         "ws": "^8.14.1"
     },
     "files": [
