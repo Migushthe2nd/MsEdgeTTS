@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as stream from "stream";
-import {client as WebSocketClient} from "websocket";
+import {WebSocket} from "ws";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
@@ -23,18 +23,17 @@ export class MsEdgeTTS {
     private static BINARY_DELIM = "Path:audio\r\n";
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
     private readonly _enableLogger;
-    private _ws: WebSocketClient;
-    private _connection;
+    private _ws: WebSocket;
     private _voice;
     private _voiceLocale;
     private _outputFormat;
     private _queue = {};
     private _startTime = 0;
 
-
-    private _log(...o: any): void {
-        if(this._enableLogger)
-            console.log(o)
+    private _log(...o:any[]){
+        if(this._enableLogger){
+            console.log(...o)
+        }
     }
 
     /**
@@ -47,60 +46,24 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (this._connection.state !== "open") {
+        if (!this._ws.OPEN) {
             await this._connect();
         }
-        this._connection.send(message, () => {
+        this._ws.send(message, () => {
             this._log("<- sent message")
         });
     }
 
     private _connect() {
         if (this._enableLogger) this._startTime = Date.now();
-        this._ws.connect(MsEdgeTTS.SYNTH_URL);
-        return new Promise((resolve) => this._ws.once("connect", resolve));
+        return new Promise((resolve) => this._ws.once("open", resolve));
     }
 
     private _initClient() {
-        this._ws = new WebSocketClient();
-
+        this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL);
         return new Promise((resolve, reject) => {
-            this._ws.on("connect", (connection) => {
-                this._connection = connection;
+            this._ws.on("open", () => {
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
-
-                this._connection.on("close", () => {
-                    this._log("disconnected")
-                });
-
-                this._connection.on("message", async (m) => {
-                    if (m.type === "utf8") {
-                        const data = m.utf8Data;
-                        const requestId = /X-RequestId:(.*?)\r\n/gm.exec(data)[1];
-                        if (data.includes("Path:turn.start")) {
-                            // start of turn, ignore
-                        } else if (data.includes("Path:turn.end")) {
-                            // end of turn, close stream
-                            this._queue[requestId].push(null);
-                        } else if (data.includes("Path:response")) {
-                            // context response, ignore
-                        } else {
-                            console.log("UNKNOWN MESSAGE", data);
-                        }
-                    } else if (m.type === "binary") {
-                        const data = m.binaryData;
-                        const requestId = /X-RequestId:(.*?)\r\n/gm.exec(data)[1];
-                        if (data[0] === 0x00 && data[1] === 0x67 && data[2] === 0x58) {
-                            // Last (empty) audio fragment
-                        } else {
-                            const index = data.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
-
-                            const audioData = data.slice(index, data.length);
-                            this._queue[requestId].push(audioData);
-                        }
-                    }
-                });
-
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
                     {
                         "context": {
@@ -117,8 +80,16 @@ export class MsEdgeTTS {
                     }
                 `).then(resolve);
             });
-
-            this._ws.on("connectFailed", function (error) {
+            this._ws.on("message",(m)=>
+                this._log("receive message", m)
+            )
+            this._ws.on("upgrade", (m)=>{
+                this._log("upgrade",m)
+            })
+            this._ws.on("close", ()=>{
+                this._log("disconnected")
+            })
+            this._ws.on("error", function (error) {
                 reject("Connect Error: " + error);
             });
 

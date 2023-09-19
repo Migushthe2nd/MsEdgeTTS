@@ -59,6 +59,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/ws@^8.5.5":
+  version "8.5.5"
+  resolved "https://registry.npmjs.org/@types/ws/-/ws-8.5.5.tgz"
+  integrity sha512-lwhs8hktwxSjf9UaZ9tG5M03PGogvFaH8gUgLNbN9HKIg0dvv6q+gkSuJ8HN4/VbyxkuLzCjlN7GquQ0gUJfIg==
+  dependencies:
+    "@types/node" "*"
+
 acorn-walk@^8.1.1:
   version "8.2.0"
   resolved "https://registry.npmjs.org/acorn-walk/-/acorn-walk-8.2.0.tgz"
@@ -307,7 +314,7 @@ typescript@^4.3.2, typescript@>=2.7, "typescript@4.0.x || 4.1.x || 4.2.x || 4.3.
   resolved "https://registry.npmjs.org/typescript/-/typescript-4.3.2.tgz"
   integrity sha512-zZ4hShnmnoVnAHpVHWpTcxdv7dWP60S2FsydQLV8V5PbS3FifjWFFRiHSWpDJahly88PRyV5teTSLoq4eG7mKw==
 
-utf-8-validate@^5.0.2:
+utf-8-validate@^5.0.2, utf-8-validate@>=5.0.2:
   version "5.0.5"
   resolved "https://registry.npmjs.org/utf-8-validate/-/utf-8-validate-5.0.5.tgz"
   integrity sha512-+pnxRYsS/axEpkrrEpzYfNZGXp0IjC/9RIxwM5gntY4Koi8SHmUGSfxfWqxZdRxrtaoVstuOzUp/rbs3JSPELQ==
@@ -345,6 +352,11 @@ wrappy@1:
   version "1.0.2"
   resolved "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz"
   integrity sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==
+
+ws@^8.14.1:
+  version "8.14.1"
+  resolved "https://registry.npmjs.org/ws/-/ws-8.14.1.tgz"
+  integrity sha512-4OOseMUq8AzRBI/7SLMUwO+FEDnguetSk7KMb1sHwvF2w2Wv5Hoj0nlifx8vtGsftE/jWHojPy8sMMzYLJ2G/A==
 
 yaeti@^0.0.6:
   version "0.0.6"
