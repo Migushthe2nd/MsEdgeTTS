@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as stream from "stream";
-import {WebSocket} from "ws";
+import {RawData, WebSocket} from "ws";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
@@ -24,15 +24,14 @@ export class MsEdgeTTS {
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
     private readonly _enableLogger;
     private _ws: WebSocket;
-    private _connection:WebSocket;
     private _voice;
     private _voiceLocale;
     private _outputFormat;
-    private _queue = {};
+    private _queue: { [key: string]: stream.Readable } = {};
     private _startTime = 0;
 
-    private _log(...o:any[]){
-        if(this._enableLogger){
+    private _log(...o: any[]) {
+        if (this._enableLogger) {
             console.log(...o)
         }
     }
@@ -47,10 +46,10 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (!this._connection.OPEN) {
+        if (!this._ws.OPEN) {
             await this._connect();
         }
-        this._connection.send(message, () => {
+        this._ws.send(message, () => {
             this._log("<- sent message")
         });
     }
@@ -64,7 +63,6 @@ export class MsEdgeTTS {
         this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL);
         return new Promise((resolve, reject) => {
             this._ws.on("open", () => {
-                this._connection = this._ws;
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
                     {
@@ -82,13 +80,29 @@ export class MsEdgeTTS {
                     }
                 `).then(resolve);
             });
-            this._ws.on("message",(m)=>
-                this._log("receive message", m)
+            this._ws.on("message", (m) => {
+                    const message = m.toString()
+                    const requestId = /X-RequestId:(.*?)\r\n/gm.exec(message)[1];
+                    if (message.includes("Path:turn.start")) {
+                        // start of turn, ignore
+                    } else if (message.includes("Path:turn.end")) {
+                        // end of turn, close stream
+                        this._queue[requestId].push(null);
+                    } else if (message.includes("Path:response")) {
+                        // context response, ignore
+                    } else if (message.includes("Path:audio")) {
+                        if (m instanceof Buffer) {
+                            this.cacheAudioData(m, requestId)
+                        }
+                    } else {
+                        console.log("UNKNOWN MESSAGE", message);
+                    }
+                }
             )
-            this._ws.on("upgrade", (m)=>{
-                this._log("upgrade",m)
+            this._ws.on("upgrade", (m) => {
+                this._log("upgrade", m)
             })
-            this._ws.on("close", ()=>{
+            this._ws.on("close", () => {
                 this._log("disconnected")
             })
             this._ws.on("error", function (error) {
@@ -97,6 +111,12 @@ export class MsEdgeTTS {
 
             this._connect();
         });
+    }
+
+    private cacheAudioData(m: Buffer, requestId: string) {
+        const index = m.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
+        const audioData = m.slice(index, m.length);
+        this._queue[requestId].push(audioData);
     }
 
     private _SSMLTemplate(input: string): string {
