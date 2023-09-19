@@ -15,10 +15,10 @@ package-lock.json
 .history
 
 # vscode setings
-.vscode/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode/
 
 # Exception for extension recommendations
 !.vscode/extensions.json
