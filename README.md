@@ -51,6 +51,18 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
     const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");  
 })
 ```
+### Use Agent
+```js
+import {SocksProxyAgent} from 'socks-proxy-agent';
+
+(async () => {
+    const agent = new SocksProxyAgent("socks://your-name%40gmail.com:abcdef12345124@br41.nordvpn.com")
+    const tts = new MsEdgeTTS(agent);
+    await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
+    const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");
+})
+```
+
 
 ## API
 

@@ -44,7 +44,7 @@ export class MsEdgeTTS {
      * @param enableLogger=false whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console
      * @param agent (optional) Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
      */
-    public constructor(enableLogger: boolean = false, agent?: Agent) {
+    public constructor(agent?: Agent, enableLogger: boolean = false) {
         this._enableLogger = enableLogger;
         this._agent = agent
     }
