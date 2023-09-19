@@ -23,6 +23,7 @@
     },
     "dependencies": {
         "axios": "^0.21.1",
+        "socks-proxy-agent": "^8.0.2",
         "ws": "^8.14.1"
     },
     "files": [
