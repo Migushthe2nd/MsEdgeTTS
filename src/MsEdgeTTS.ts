@@ -31,6 +31,12 @@ export class MsEdgeTTS {
     private _queue = {};
     private _startTime = 0;
 
+
+    private _log(...o: any): void {
+        if(this._enableLogger)
+            console.log(o)
+    }
+
     /**
      * Create a new `MsEdgeTTS` instance.
      *
@@ -45,7 +51,7 @@ export class MsEdgeTTS {
             await this._connect();
         }
         this._connection.send(message, () => {
-            if (this._enableLogger) console.log("<- sent message");
+            this._log("<- sent message")
         });
     }
 
@@ -61,10 +67,10 @@ export class MsEdgeTTS {
         return new Promise((resolve, reject) => {
             this._ws.on("connect", (connection) => {
                 this._connection = connection;
-                if (this._enableLogger) console.log("Connected in", (Date.now() - this._startTime) / 1000, "seconds");
+                this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
 
                 this._connection.on("close", () => {
-                    if (this._enableLogger) console.log("disconnected");
+                    this._log("disconnected")
                 });
 
                 this._connection.on("message", async (m) => {
