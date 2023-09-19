@@ -24,6 +24,7 @@ export class MsEdgeTTS {
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
     private readonly _enableLogger;
     private _ws: WebSocket;
+    private _connection:WebSocket;
     private _voice;
     private _voiceLocale;
     private _outputFormat;
@@ -46,10 +47,10 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (!this._ws.OPEN) {
+        if (!this._connection.OPEN) {
             await this._connect();
         }
-        this._ws.send(message, () => {
+        this._connection.send(message, () => {
             this._log("<- sent message")
         });
     }
@@ -63,6 +64,7 @@ export class MsEdgeTTS {
         this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL);
         return new Promise((resolve, reject) => {
             this._ws.on("open", () => {
+                this._connection = this._ws;
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
                     {
