@@ -16,8 +16,9 @@
     },
     "devDependencies": {
         "@types/node": "^15.12.1",
-        "typescript": "^4.3.2",
-        "typedoc": "^0.22.2"
+        "ts-node": "^10.9.1",
+        "typedoc": "^0.22.2",
+        "typescript": "^4.3.2"
     },
     "dependencies": {
         "axios": "^0.21.1",
