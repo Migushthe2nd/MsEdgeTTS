@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as stream from "stream";
-import {RawData, WebSocket} from "ws";
+import {WebSocket} from "ws";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
@@ -30,7 +30,7 @@ export class MsEdgeTTS {
     private _outputFormat;
     private _queue: { [key: string]: stream.Readable } = {};
     private _startTime = 0;
-    private _agent: Agent;
+    private readonly _agent: Agent;
 
     private _log(...o: any[]) {
         if (this._enableLogger) {
@@ -50,18 +50,18 @@ export class MsEdgeTTS {
     }
 
     private async _send(message) {
-        if (!this._ws.OPEN) {
-            await this._connect();
+        for (let i = 1; i <= 3&&this._ws.readyState!==this._ws.OPEN; i++) {
+            if(i==1){
+                this._startTime = Date.now()
+            }
+            this._log("connecting: ", i)
+            await this._initClient();
         }
         this._ws.send(message, () => {
-            this._log("<- sent message")
+            this._log("<- sent message: ", message)
         });
     }
 
-    private _connect() {
-        if (this._enableLogger) this._startTime = Date.now();
-        return new Promise((resolve) => this._ws.once("open", resolve));
-    }
 
     private _initClient() {
         this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL, {agent: this._agent});
@@ -97,6 +97,8 @@ export class MsEdgeTTS {
                     } else if (message.includes("Path:audio")) {
                         if (m instanceof Buffer) {
                             this.cacheAudioData(m, requestId)
+                        }else{
+                            console.log("UNKNOWN MESSAGE", message);
                         }
                     } else {
                         console.log("UNKNOWN MESSAGE", message);
@@ -107,13 +109,11 @@ export class MsEdgeTTS {
                 this._log("upgrade", m)
             })
             this._ws.on("close", () => {
-                this._log("disconnected")
+                this._log("disconnected after:" ,(Date.now() - this._startTime) / 1000, "seconds")
             })
             this._ws.on("error", function (error) {
                 reject("Connect Error: " + error);
             });
-
-            this._connect();
         });
     }
 
@@ -121,6 +121,7 @@ export class MsEdgeTTS {
         const index = m.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
         const audioData = m.slice(index, m.length);
         this._queue[requestId].push(audioData);
+        this._log("receive audio chunk size: ",audioData?.length)
     }
 
     private _SSMLTemplate(input: string): string {
@@ -171,7 +172,8 @@ export class MsEdgeTTS {
             || oldOutputFormat !== this._outputFormat;
 
         // create new client
-        if (!this._ws || changed) {
+        if (changed||this._ws.readyState!==this._ws.OPEN) {
+            this._startTime = Date.now()
             await this._initClient();
         }
     }
