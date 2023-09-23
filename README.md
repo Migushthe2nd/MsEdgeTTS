@@ -23,6 +23,9 @@ format [can be found here](https://docs.microsoft.com/en-us/azure/cognitive-serv
 
 ## Example usage
 
+Make sure to **escape/sanitize** your user's input!
+Use a library like [xml-escape](https://www.npmjs.com/package/xml-escape).
+
 ### Write to stream
 
 ```js
