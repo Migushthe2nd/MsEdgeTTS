@@ -10,7 +10,7 @@ Full support for SSML, however, the following is the default SSML object:
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts"
        xml:lang="${this._voiceLang}">
     <voice name="${voiceName}">
-        <prosody>
+        <prosody rate="${rate}" pitch="${pitch}" volume="${volume}">
             ${input}
         </prosody>
 </voice>
@@ -54,7 +54,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 })();
 ```
 
-### Change voice prosody
+### Change voice rate, pitch and volume
 ```js
 (async () => {
     const tts = new MsEdgeTTS(agent);
