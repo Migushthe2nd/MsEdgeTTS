@@ -10,8 +10,10 @@ Full support for SSML, however, the following is the default SSML object:
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts"
        xml:lang="${this._voiceLang}">
     <voice name="${voiceName}">
-        ${input}
-    </voice>
+        <prosody>
+            ${input}
+        </prosody>
+</voice>
 </speak>
 ```
 
@@ -21,7 +23,7 @@ format [can be found here](https://docs.microsoft.com/en-us/azure/cognitive-serv
 
 ## Example usage
 
-### Write to Stream
+### Write to stream
 
 ```js
 import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
@@ -40,7 +42,7 @@ readable.on("closed", () => {
 });
 ```
 
-### Write to File
+### Write to file
 
 ```js
 import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
@@ -49,9 +51,19 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
     const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
     const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");  
-})
+})();
 ```
-### Use Agent
+
+### Change voice prosody
+```js
+(async () => {
+    const tts = new MsEdgeTTS(agent);
+    await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
+    const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?", {rate: 0.5, pitch: "+200Hz"});
+})();
+```
+
+### Use an alternative HTTP Agent
 Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
 ```js
 import {SocksProxyAgent} from 'socks-proxy-agent';
@@ -61,12 +73,11 @@ import {SocksProxyAgent} from 'socks-proxy-agent';
     const tts = new MsEdgeTTS(agent);
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
     const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");
-})
+})();
 ```
-
 
 ## API
 
-This library only supports promises.
+For the full documentation check out the [API Documentation](https://migushthe2nd.github.io/MsEdgeTTS).
 
-[API Documentation](https://migushthe2nd.github.io/MsEdgeTTS)
+This library only supports promises.

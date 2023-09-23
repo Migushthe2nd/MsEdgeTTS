@@ -9,5 +9,3 @@ export enum PITCH {
     X_HIGH = "x-high",
     DEFAULT = "default",
 }
-
-export type Pitch = PITCH | string;

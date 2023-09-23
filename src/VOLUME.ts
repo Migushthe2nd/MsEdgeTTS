@@ -10,5 +10,3 @@ export enum VOLUME {
     X_LOUD = "x-LOUD",
     DEFAULT = "default",
 }
-
-export type Volume = VOLUME | string;

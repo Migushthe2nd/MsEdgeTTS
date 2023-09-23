@@ -9,5 +9,3 @@ export enum RATE {
     X_FAST = "x-fast",
     DEFAULT = "default",
 }
-
-export type Rate = RATE | string;

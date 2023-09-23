@@ -22,22 +22,22 @@ export type Voice = {
 export type ProsodyOptions = {
     /**
      * The pitch to use.
-     * Can be any {@link PITCH}, or a string with an absolute frequency in Hz (300Hz), a relative frequency in Hz (+50Hz), a relative semitone (+2st), or a relative percentage (+50%).
+     * Can be any {@link PITCH}, or a relative frequency in Hz (+50Hz), a relative semitone (+2st), or a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,pitch,-Indicates%20the%20baseline)
      */
     pitch?: PITCH | string,
     /**
      * The rate to use.
-     * Can be any {@link RATE}, or a string with a relative number (0.5), or a relative percentage (+50%).
+     * Can be any {@link RATE}, or a relative number (0.5), or string with a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,rate,-Indicates%20the%20speaking)
      */
-    rate?: RATE | string,
+    rate?: RATE | string | number,
     /**
      * The volume to use.
-     * Can be any {@link VOLUME}, or a string with an absolute number (0, 100), a relative number (+50), or a relative percentage (+50%).
+     * Can be any {@link VOLUME}, or an absolute number (0, 100), a string with a relative number (+50), or a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,volume,-Indicates%20the%20volume)
      */
-    volume?: VOLUME | string,
+    volume?: VOLUME | string | number,
 }
 
 export class MsEdgeTTS {
