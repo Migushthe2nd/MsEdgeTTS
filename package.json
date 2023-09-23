@@ -9,7 +9,7 @@
     "module": "./dist/index",
     "main": "./dist/index",
     "scripts": {
-        "start": "yarn run build && node test/index.js",
+        "dev": "yarn run build && ts-node test/test.ts",
         "build": "tsc",
         "prepublishOnly": "yarn run build",
         "publish": "yarn publish --access=public"
@@ -17,6 +17,7 @@
     "devDependencies": {
         "@types/node": "^15.12.1",
         "@types/ws": "^8.5.5",
+        "ts-node": "^10.9.1",
         "typedoc": "^0.22.2",
         "typescript": "^4.3.2"
     },
