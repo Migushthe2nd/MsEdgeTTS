@@ -5,6 +5,9 @@ import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
 import {Agent} from "http";
+import {PITCH} from "./PITCH";
+import {RATE} from "./RATE";
+import {VOLUME} from "./VOLUME";
 
 export type Voice = {
     Name: string;
@@ -14,6 +17,27 @@ export type Voice = {
     SuggestedCodec: string;
     FriendlyName: string;
     Status: string;
+}
+
+export type ProsodyOptions = {
+    /**
+     * The pitch to use.
+     * Can be any {@link PITCH}, or a string with an absolute frequency in Hz (300Hz), a relative frequency in Hz (+50Hz), a relative semitone (+2st), or a relative percentage (+50%).
+     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,pitch,-Indicates%20the%20baseline)
+     */
+    pitch?: PITCH | string,
+    /**
+     * The rate to use.
+     * Can be any {@link RATE}, or a string with a relative number (0.5), or a relative percentage (+50%).
+     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,rate,-Indicates%20the%20speaking)
+     */
+    rate?: RATE | string,
+    /**
+     * The volume to use.
+     * Can be any {@link VOLUME}, or a string with an absolute number (0, 100), a relative number (+50), or a relative percentage (+50%).
+     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,volume,-Indicates%20the%20volume)
+     */
+    volume?: VOLUME | string,
 }
 
 export class MsEdgeTTS {
@@ -124,10 +148,23 @@ export class MsEdgeTTS {
         this._log("receive audio chunk size: ", audioData?.length)
     }
 
-    private _SSMLTemplate(input: string): string {
+    private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
+        // in case future updates to the edge API block these elements, we'll be concatenating strings.
+        const args = [];
+        if (options.pitch) {
+            args.push(`pitch="${options.pitch}"`);
+        }
+        if (options.rate) {
+            args.push(`rate="${options.rate}"`);
+        }
+        if (options.volume) {
+            args.push(`volume="${options.volume}"`);
+        }
         return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._voiceLocale}">
                 <voice name="${this._voice}">
-                    ${input}
+                    <prosody ${args.join(" ")}>
+                        ${input}
+                    </prosody> 
                 </voice>
             </speak>`;
     }
@@ -188,19 +225,22 @@ export class MsEdgeTTS {
      *
      * @param path a valid output path, including a filename and file extension.
      * @param input the input to synthesise
+     * @param options (optional) {@link ProsodyOptions}
      * @returns {Promise<string>} - a `Promise` with the full filepath
      */
-    toFile(path: string, input: string): Promise<string> {
-        return this._rawSSMLRequestToFile(path, this._SSMLTemplate(input));
+    toFile(path: string, input: string, options?: ProsodyOptions): Promise<string> {
+        return this._rawSSMLRequestToFile(path, this._SSMLTemplate(input, options));
     }
 
     /**
      * Writes raw audio synthesised from text in real-time to a {@link stream.Readable}. Uses a basic {@link _SSMLTemplate SML template}.
      *
      * @param input the text to synthesise. Can include SSML elements.
+     * @param options (optional) {@link ProsodyOptions}
+     * @returns {stream.Readable} - a `stream.Readable` with the audio data
      */
-    toStream(input): stream.Readable {
-        return this._rawSSMLRequest(this._SSMLTemplate(input));
+    toStream(input, options?: ProsodyOptions): stream.Readable {
+        return this._rawSSMLRequest(this._SSMLTemplate(input, options));
     }
 
     /**
@@ -218,6 +258,7 @@ export class MsEdgeTTS {
      * Writes raw audio synthesised from a request in real-time to a {@link stream.Readable}. Has no SSML template. Basic SSML should be provided in the request.
      *
      * @param requestSSML the SSML to send. SSML elements required in order to work.
+     * @returns {stream.Readable} - a `stream.Readable` with the audio data
      */
     rawToStream(requestSSML): stream.Readable {
         return this._rawSSMLRequest(requestSSML);
