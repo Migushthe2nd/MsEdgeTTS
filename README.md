@@ -6,7 +6,6 @@ An simple Azure Speech Service module that uses the Microsoft Edge Read Aloud AP
 Full support for SSML, however, the following is the default SSML object:
 
 ```xml
-
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts"
        xml:lang="${this._voiceLang}">
     <voice name="${voiceName}">
