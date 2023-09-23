@@ -41,24 +41,24 @@ export class MsEdgeTTS {
     /**
      * Create a new `MsEdgeTTS` instance.
      *
-     * @param enableLogger=false whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console
      * @param agent (optional) Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
+     * @param enableLogger=false whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console
      */
     public constructor(agent?: Agent, enableLogger: boolean = false) {
+        this._agent = agent;
         this._enableLogger = enableLogger;
-        this._agent = agent
     }
 
     private async _send(message) {
-        for (let i = 1; i <= 3&&this._ws.readyState!==this._ws.OPEN; i++) {
-            if(i==1){
-                this._startTime = Date.now()
+        for (let i = 1; i <= 3 && this._ws.readyState !== this._ws.OPEN; i++) {
+            if (i == 1) {
+                this._startTime = Date.now();
             }
-            this._log("connecting: ", i)
+            this._log("connecting: ", i);
             await this._initClient();
         }
         this._ws.send(message, () => {
-            this._log("<- sent message: ", message)
+            this._log("<- sent message: ", message);
         });
     }
 
@@ -97,7 +97,7 @@ export class MsEdgeTTS {
                     } else if (message.includes("Path:audio")) {
                         if (m instanceof Buffer) {
                             this.cacheAudioData(m, requestId)
-                        }else{
+                        } else {
                             console.log("UNKNOWN MESSAGE", message);
                         }
                     } else {
@@ -109,7 +109,7 @@ export class MsEdgeTTS {
                 this._log("upgrade", m)
             })
             this._ws.on("close", () => {
-                this._log("disconnected after:" ,(Date.now() - this._startTime) / 1000, "seconds")
+                this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
             })
             this._ws.on("error", function (error) {
                 reject("Connect Error: " + error);
@@ -121,7 +121,7 @@ export class MsEdgeTTS {
         const index = m.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
         const audioData = m.slice(index, m.length);
         this._queue[requestId].push(audioData);
-        this._log("receive audio chunk size: ",audioData?.length)
+        this._log("receive audio chunk size: ", audioData?.length)
     }
 
     private _SSMLTemplate(input: string): string {
@@ -172,7 +172,7 @@ export class MsEdgeTTS {
             || oldOutputFormat !== this._outputFormat;
 
         // create new client
-        if (changed||this._ws.readyState!==this._ws.OPEN) {
+        if (changed || this._ws.readyState !== this._ws.OPEN) {
             this._startTime = Date.now()
             await this._initClient();
         }
