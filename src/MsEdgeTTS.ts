@@ -1,9 +1,10 @@
 import axios from "axios";
 import * as stream from "stream";
-import {client as WebSocketClient} from "websocket";
+import {WebSocket} from "ws";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
+import {Agent} from "http";
 
 export type Voice = {
     Name: string;
@@ -23,78 +24,50 @@ export class MsEdgeTTS {
     private static BINARY_DELIM = "Path:audio\r\n";
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/;
     private readonly _enableLogger;
-    private _ws: WebSocketClient;
-    private _connection;
+    private _ws: WebSocket;
     private _voice;
     private _voiceLocale;
     private _outputFormat;
-    private _queue = {};
+    private _queue: { [key: string]: stream.Readable } = {};
     private _startTime = 0;
+    private readonly _agent: Agent;
+
+    private _log(...o: any[]) {
+        if (this._enableLogger) {
+            console.log(...o)
+        }
+    }
 
     /**
      * Create a new `MsEdgeTTS` instance.
      *
      * @param enableLogger=false whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console
+     * @param agent (optional) Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
      */
-    public constructor(enableLogger: boolean = false) {
+    public constructor(agent?: Agent, enableLogger: boolean = false) {
         this._enableLogger = enableLogger;
+        this._agent = agent
     }
 
     private async _send(message) {
-        if (this._connection.state !== "open") {
-            await this._connect();
+        for (let i = 1; i <= 3&&this._ws.readyState!==this._ws.OPEN; i++) {
+            if(i==1){
+                this._startTime = Date.now()
+            }
+            this._log("connecting: ", i)
+            await this._initClient();
         }
-        this._connection.send(message, () => {
-            if (this._enableLogger) console.log("<- sent message");
+        this._ws.send(message, () => {
+            this._log("<- sent message: ", message)
         });
     }
 
-    private _connect() {
-        if (this._enableLogger) this._startTime = Date.now();
-        this._ws.connect(MsEdgeTTS.SYNTH_URL);
-        return new Promise((resolve) => this._ws.once("connect", resolve));
-    }
 
     private _initClient() {
-        this._ws = new WebSocketClient();
-
+        this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL, {agent: this._agent});
         return new Promise((resolve, reject) => {
-            this._ws.on("connect", (connection) => {
-                this._connection = connection;
-                if (this._enableLogger) console.log("Connected in", (Date.now() - this._startTime) / 1000, "seconds");
-
-                this._connection.on("close", () => {
-                    if (this._enableLogger) console.log("disconnected");
-                });
-
-                this._connection.on("message", async (m) => {
-                    if (m.type === "utf8") {
-                        const data = m.utf8Data;
-                        const requestId = /X-RequestId:(.*?)\r\n/gm.exec(data)[1];
-                        if (data.includes("Path:turn.start")) {
-                            // start of turn, ignore
-                        } else if (data.includes("Path:turn.end")) {
-                            // end of turn, close stream
-                            this._queue[requestId].push(null);
-                        } else if (data.includes("Path:response")) {
-                            // context response, ignore
-                        } else {
-                            console.log("UNKNOWN MESSAGE", data);
-                        }
-                    } else if (m.type === "binary") {
-                        const data = m.binaryData;
-                        const requestId = /X-RequestId:(.*?)\r\n/gm.exec(data)[1];
-                        if (data[0] === 0x00 && data[1] === 0x67 && data[2] === 0x58) {
-                            // Last (empty) audio fragment
-                        } else {
-                            const index = data.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
-
-                            const audioData = data.slice(index, data.length);
-                            this._queue[requestId].push(audioData);
-                        }
-                    }
-                });
-
+            this._ws.on("open", () => {
+                this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
                     {
                         "context": {
@@ -111,13 +84,44 @@ export class MsEdgeTTS {
                     }
                 `).then(resolve);
             });
-
-            this._ws.on("connectFailed", function (error) {
+            this._ws.on("message", (m) => {
+                    const message = m.toString()
+                    const requestId = /X-RequestId:(.*?)\r\n/gm.exec(message)[1];
+                    if (message.includes("Path:turn.start")) {
+                        // start of turn, ignore
+                    } else if (message.includes("Path:turn.end")) {
+                        // end of turn, close stream
+                        this._queue[requestId].push(null);
+                    } else if (message.includes("Path:response")) {
+                        // context response, ignore
+                    } else if (message.includes("Path:audio")) {
+                        if (m instanceof Buffer) {
+                            this.cacheAudioData(m, requestId)
+                        }else{
+                            console.log("UNKNOWN MESSAGE", message);
+                        }
+                    } else {
+                        console.log("UNKNOWN MESSAGE", message);
+                    }
+                }
+            )
+            this._ws.on("upgrade", (m) => {
+                this._log("upgrade", m)
+            })
+            this._ws.on("close", () => {
+                this._log("disconnected after:" ,(Date.now() - this._startTime) / 1000, "seconds")
+            })
+            this._ws.on("error", function (error) {
                 reject("Connect Error: " + error);
             });
-
-            this._connect();
         });
+    }
+
+    private cacheAudioData(m: Buffer, requestId: string) {
+        const index = m.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
+        const audioData = m.slice(index, m.length);
+        this._queue[requestId].push(audioData);
+        this._log("receive audio chunk size: ",audioData?.length)
     }
 
     private _SSMLTemplate(input: string): string {
@@ -168,7 +172,8 @@ export class MsEdgeTTS {
             || oldOutputFormat !== this._outputFormat;
 
         // create new client
-        if (!this._ws || changed) {
+        if (changed||this._ws.readyState!==this._ws.OPEN) {
+            this._startTime = Date.now()
             await this._initClient();
         }
     }
