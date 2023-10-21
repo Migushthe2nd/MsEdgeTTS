@@ -121,10 +121,10 @@ export class MsEdgeTTS {
                         if (m instanceof Buffer) {
                             this.cacheAudioData(m, requestId)
                         } else {
-                            console.log("UNKNOWN MESSAGE", message);
+                            this._log("UNKNOWN MESSAGE", message);
                         }
                     } else {
-                        console.log("UNKNOWN MESSAGE", message);
+                        this._log("UNKNOWN MESSAGE", message);
                     }
                 }
             )
@@ -207,6 +207,13 @@ export class MsEdgeTTS {
     private _metadataCheck() {
         if (!this._ws) throw new Error(
             "Speech synthesis not configured yet. Run setMetadata before calling toStream or toFile.");
+    }
+
+    /**
+     * Close the WebSocket connection.
+     */
+    close() {
+        this._ws.close();
     }
 
     /**

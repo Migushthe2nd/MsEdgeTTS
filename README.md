@@ -58,8 +58,10 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 
 ### Change voice rate, pitch and volume
 ```js
+import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
+
 (async () => {
-    const tts = new MsEdgeTTS(agent);
+    const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
     const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?", {rate: 0.5, pitch: "+200Hz"});
 })();
