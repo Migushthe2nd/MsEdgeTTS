@@ -19,25 +19,25 @@ export type Voice = {
     Status: string;
 }
 
-export type ProsodyOptions = {
+export class ProsodyOptions {
     /**
      * The pitch to use.
      * Can be any {@link PITCH}, or a relative frequency in Hz (+50Hz), a relative semitone (+2st), or a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,pitch,-Indicates%20the%20baseline)
      */
-    pitch?: PITCH | string,
+    pitch?: PITCH | string = "+0Hz";
     /**
      * The rate to use.
      * Can be any {@link RATE}, or a relative number (0.5), or string with a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,rate,-Indicates%20the%20speaking)
      */
-    rate?: RATE | string | number,
+    rate?: RATE | string | number = 1.0;
     /**
      * The volume to use.
      * Can be any {@link VOLUME}, or an absolute number (0, 100), a string with a relative number (+50), or a relative percentage (+50%).
      * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,volume,-Indicates%20the%20volume)
      */
-    volume?: VOLUME | string | number,
+    volume?: VOLUME | string | number = 100.0;
 }
 
 export class MsEdgeTTS {
@@ -85,7 +85,6 @@ export class MsEdgeTTS {
             this._log("<- sent message: ", message);
         });
     }
-
 
     private _initClient() {
         this._ws = new WebSocket(MsEdgeTTS.SYNTH_URL, {agent: this._agent});
@@ -148,21 +147,11 @@ export class MsEdgeTTS {
         this._log("receive audio chunk size: ", audioData?.length)
     }
 
-    private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
+    private _SSMLTemplate(input: string, options: ProsodyOptions = new ProsodyOptions()): string {
         // in case future updates to the edge API block these elements, we'll be concatenating strings.
-        const args = [];
-        if (options.pitch) {
-            args.push(`pitch="${options.pitch}"`);
-        }
-        if (options.rate) {
-            args.push(`rate="${options.rate}"`);
-        }
-        if (options.volume) {
-            args.push(`volume="${options.volume}"`);
-        }
         return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._voiceLocale}">
                 <voice name="${this._voice}">
-                    <prosody ${args.join(" ")}>
+                    <prosody pitch="${options.pitch}" rate="${options.rate}" volume="${options.volume}">
                         ${input}
                     </prosody> 
                 </voice>
