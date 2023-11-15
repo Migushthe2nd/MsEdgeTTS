@@ -133,6 +133,9 @@ export class MsEdgeTTS {
             })
             this._ws.on("close", () => {
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
+                for (const requestId in this._queue) {
+                    this._queue[requestId].push(null);
+                }
             })
             this._ws.on("error", function (error) {
                 reject("Connect Error: " + error);
@@ -261,13 +264,16 @@ export class MsEdgeTTS {
     }
 
     private _rawSSMLRequestToFile(path: string, requestSSML: string): Promise<string> {
-        return new Promise(async (resolve) => {
+        return new Promise(async (resolve, reject) => {
             const stream = this._rawSSMLRequest(requestSSML);
             const chunks = [];
 
             stream.on("data", (data) => chunks.push(data));
 
             stream.once("close", async () => {
+                if (Object.keys(this._queue).length > 0 && chunks.length === 0) {
+                    reject("No audio data received");
+                }
                 const output = fs.createWriteStream(path);
                 while (chunks.length > 0) {
                     await new Promise((resolve) => output.write(chunks.shift(), resolve));
