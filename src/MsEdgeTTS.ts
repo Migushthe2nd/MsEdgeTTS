@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as stream from "stream";
-import {WebSocket} from "ws";
+import {WebSocket} from "isomorphic-ws";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import * as fs from "fs";
