@@ -39,7 +39,7 @@ readable.on("data", (data) => {
     // raw audio file data
 });
 
-readable.on("closed", () => {
+readable.on("close", () => {
     console.log("STREAM CLOSED");
 });
 ```
