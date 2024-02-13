@@ -11,13 +11,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          cache: 'yarn'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: yarn
+        run: pnpm
 
       - name: Test to see if the project compiles
-        run: yarn run build
+        run: pnpm run build
 
       - name: Build the docs
         run: npx typedoc
