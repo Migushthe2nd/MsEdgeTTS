@@ -154,8 +154,9 @@ export class MsEdgeTTS {
         this._log("receive audio chunk size: ", audioData?.length)
     }
 
-    private _SSMLTemplate(input: string, options: ProsodyOptions = new ProsodyOptions()): string {
+    private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
         // in case future updates to the edge API block these elements, we'll be concatenating strings.
+        options = {...new ProsodyOptions(), ...options}
         return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._voiceLocale}">
                 <voice name="${this._voice}">
                     <prosody pitch="${options.pitch}" rate="${options.rate}" volume="${options.volume}">
