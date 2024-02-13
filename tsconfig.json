@@ -2,14 +2,24 @@
     "include": [
         "src/**/*"
     ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "docs",
+        "src/**/*.spec.ts",
+    ],
     "compilerOptions": {
         "moduleResolution": "node",
         "module": "commonjs",
-        "target": "ES6",
+        "target": "ESNext",
         "declaration": true,
         "outDir": "dist",
         "skipLibCheck": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "types": [
+            "@types/jest",
+            "@types/node"
+        ]
     },
     "typedocOptions": {
         "entryPoints": ["src/index.ts"],
