@@ -1,9 +1,9 @@
 import axios from "axios";
-import * as stream from "stream";
 import WebSocket from "isomorphic-ws";
 import {Buffer} from "buffer";
 import {randomBytes} from "crypto";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
+import {Readable} from "stream";
 import * as fs from "fs";
 import {Agent} from "http";
 import {PITCH} from "./PITCH";
@@ -54,7 +54,7 @@ export class MsEdgeTTS {
     private _voice;
     private _voiceLocale;
     private _outputFormat;
-    private _queue: { [key: string]: stream.Readable } = {};
+    private _streams: { [key: string]: Readable } = {};
     private _startTime = 0;
     private readonly _agent: Agent;
 
@@ -122,23 +122,19 @@ export class MsEdgeTTS {
                     // start of turn, ignore
                 } else if (message.includes("Path:turn.end")) {
                     // end of turn, close stream
-                    this._queue[requestId].push(null);
+                    this._streams[requestId].push(null);
                 } else if (message.includes("Path:response")) {
                     // context response, ignore
-                } else if (message.includes("Path:audio")) {
-                    if (m.data instanceof ArrayBuffer) {
-                        this.cacheAudioData(buffer, requestId)
-                    } else {
-                        this._log("UNKNOWN MESSAGE", message);
-                    }
+                } else if (message.includes("Path:audio") && m.data instanceof ArrayBuffer) {
+                    this._pushAudioData(buffer, requestId)
                 } else {
                     this._log("UNKNOWN MESSAGE", message);
                 }
             }
             this._ws.onclose = () => {
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
-                for (const requestId in this._queue) {
-                    this._queue[requestId].push(null);
+                for (const requestId in this._streams) {
+                    this._streams[requestId].push(null);
                 }
             }
             this._ws.onerror = function (error) {
@@ -147,11 +143,11 @@ export class MsEdgeTTS {
         });
     }
 
-    private cacheAudioData(m: Buffer, requestId: string) {
-        const index = m.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
-        const audioData = m.slice(index, m.length);
-        this._queue[requestId].push(audioData);
-        this._log("receive audio chunk size: ", audioData?.length)
+    private _pushAudioData(audioBuffer: Buffer, requestId: string) {
+        const audioStartIndex = audioBuffer.indexOf(MsEdgeTTS.BINARY_DELIM) + MsEdgeTTS.BINARY_DELIM.length;
+        const audioData = audioBuffer.subarray(audioStartIndex);
+        this._streams[requestId].push(audioData);
+        this._log("received audio chunk, size: ", audioData?.length)
     }
 
     private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
@@ -237,14 +233,15 @@ export class MsEdgeTTS {
     }
 
     /**
-     * Writes raw audio synthesised from text in real-time to a {@link stream.Readable}. Uses a basic {@link _SSMLTemplate SML template}.
+     * Writes raw audio synthesised from text in real-time to a {@link Readable}. Uses a basic {@link _SSMLTemplate SML template}.
      *
      * @param input the text to synthesise. Can include SSML elements.
      * @param options (optional) {@link ProsodyOptions}
-     * @returns {stream.Readable} - a `stream.Readable` with the audio data
+     * @returns {Readable} - a `stream.Readable` with the audio data
      */
-    toStream(input, options?: ProsodyOptions): stream.Readable {
-        return this._rawSSMLRequest(this._SSMLTemplate(input, options));
+    toStream(input: string, options?: ProsodyOptions): Readable {
+        const {stream} = this._rawSSMLRequest(this._SSMLTemplate(input, options));
+        return stream;
     }
 
     /**
@@ -259,49 +256,57 @@ export class MsEdgeTTS {
     }
 
     /**
-     * Writes raw audio synthesised from a request in real-time to a {@link stream.Readable}. Has no SSML template. Basic SSML should be provided in the request.
+     * Writes raw audio synthesised from a request in real-time to a {@link Readable}. Has no SSML template. Basic SSML should be provided in the request.
      *
      * @param requestSSML the SSML to send. SSML elements required in order to work.
-     * @returns {stream.Readable} - a `stream.Readable` with the audio data
+     * @returns {Readable} - a `stream.Readable` with the audio data
      */
-    rawToStream(requestSSML): stream.Readable {
-        return this._rawSSMLRequest(requestSSML);
+    rawToStream(requestSSML: string): Readable {
+        const {stream} = this._rawSSMLRequest(requestSSML);
+        return stream;
     }
 
     private _rawSSMLRequestToFile(path: string, requestSSML: string): Promise<string> {
         return new Promise(async (resolve, reject) => {
-            const stream = this._rawSSMLRequest(requestSSML);
-            const chunks = [];
+            const {stream, requestId} = this._rawSSMLRequest(requestSSML);
 
-            stream.on("data", (data) => chunks.push(data));
+            const writableFile = stream.pipe(fs.createWriteStream(path));
 
-            stream.once("close", async () => {
-                if (Object.keys(this._queue).length > 0 && chunks.length === 0) {
+            writableFile.once("close", async () => {
+                if (writableFile.bytesWritten > 0) {
+                    resolve(path);
+                } else {
+                    fs.unlinkSync(path);
                     reject("No audio data received");
                 }
-                const output = fs.createWriteStream(path);
-                while (chunks.length > 0) {
-                    await new Promise((resolve) => output.write(chunks.shift(), resolve));
-                }
-                resolve(path);
+            });
+
+            stream.on("error", (e) => {
+                stream.destroy();
+                reject(e);
             });
         });
     }
 
-    private _rawSSMLRequest(requestSSML): stream.Readable {
+    private _rawSSMLRequest(requestSSML: string): {stream: Readable, requestId: string} {
         this._metadataCheck();
 
         const requestId = randomBytes(16).toString("hex");
         const request = `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
                 ` + requestSSML.trim();
         // https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup
-        const readable = new stream.Readable({
+        const self = this;
+        const stream = new Readable({
             read() {
             },
+            destroy(error: Error | null, callback: (error: (Error | null)) => void) {
+                delete self._streams[requestId];
+                callback(error);
+            },
         });
-        this._queue[requestId] = readable;
+        this._streams[requestId] = stream;
         this._send(request).then();
-        return readable;
+        return {stream, requestId};
     }
 
 }
