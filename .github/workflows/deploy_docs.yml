@@ -16,10 +16,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          cache: 'pnpm'
+          node-version: 18
+          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm
+        run: pnpm install
 
       - name: Test to see if the project compiles
         run: pnpm run build
