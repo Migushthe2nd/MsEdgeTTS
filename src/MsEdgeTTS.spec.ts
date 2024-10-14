@@ -5,7 +5,7 @@ import {readFileSync, mkdirSync} from "fs"
 import {existsSync, unlinkSync} from "node:fs"
 import {tmpdir} from "os"
 import {join} from "path"
-import {randomBytes} from "crypto"
+import randomBytes from "randombytes"
 
 describe("MsEdgeTTS", () => {
     let tts: MsEdgeTTS

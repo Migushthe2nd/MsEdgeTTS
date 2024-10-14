@@ -1,7 +1,7 @@
 import axios from "axios";
 import WebSocket from "isomorphic-ws";
 import {Buffer} from "buffer";
-import {randomBytes} from "crypto";
+import randomBytes from "randombytes";
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
 import {Readable} from "stream";
 import * as fs from "fs";
