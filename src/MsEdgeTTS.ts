@@ -41,6 +41,22 @@ export class ProsodyOptions {
     volume?: VOLUME | string | number = 100.0
 }
 
+export class MetadataOptions {
+    /**
+     * (optional) any voice locale that is supported by the voice. See the list of all voices for compatibility. If not provided, the locale will be inferred from the `voiceName`.
+     * Changing the voiceName will reset the voiceLocale.
+     */
+    voiceLocale?: string
+    /**
+     * (optional) whether to enable sentence boundary metadata. Default is `false`
+     */
+    sentenceBoundaryEnabled?: boolean = false
+    /**
+     * (optional) whether to enable word boundary metadata. Default is `false`
+     */
+    wordBoundaryEnabled?: boolean = false
+}
+
 enum messageTypes {
     TURN_START = "turn.start",
     TURN_END = "turn.end",
@@ -63,8 +79,8 @@ export class MsEdgeTTS {
     private readonly _isBrowser: boolean
     private _ws: WebSocket
     private _voice
-    private _voiceLocale
     private _outputFormat
+    private _metadataOptions: MetadataOptions = new MetadataOptions()
     private _streams: { [key: string]: { audio: Readable, metadata: Readable } } = {}
     private _startTime = 0
     private readonly _agent: Agent
@@ -115,8 +131,8 @@ export class MsEdgeTTS {
                             "synthesis": {
                                 "audio": {
                                     "metadataoptions": {
-                                        "sentenceBoundaryEnabled": "false",
-                                        "wordBoundaryEnabled": "false"
+                                        "sentenceBoundaryEnabled": "${this._metadataOptions.sentenceBoundaryEnabled}",
+                                        "wordBoundaryEnabled": "${this._metadataOptions.wordBoundaryEnabled}"
                                     },
                                     "outputFormat": "${this._outputFormat}" 
                                 }
@@ -182,7 +198,7 @@ export class MsEdgeTTS {
     private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
         // in case future updates to the edge API block these elements, we'll be concatenating strings.
         options = {...new ProsodyOptions(), ...options}
-        return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._voiceLocale}">
+        return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this._metadataOptions.voiceLocale}">
                 <voice name="${this._voice}">
                     <prosody pitch="${options.pitch}" rate="${options.rate}" volume="${options.volume}">
                         ${input}
@@ -208,33 +224,36 @@ export class MsEdgeTTS {
      * Must be called at least once before text can be synthesised.
      * Saved in this instance. Can be called at any time times to update the metadata.
      *
-     * @param voiceName a string with any `ShortName`. A list of all available neural voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#neural-voices). However, it is not limited to neural voices: standard voices can also be used. A list of standard voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#standard-voices)
+     * @param voiceName a string with any `ShortName`. A list of all available neural voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#neural-voices). However, it is not limited to neural voices: standard voices can also be used. A list of standard voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#standard-voices). Changing the voiceName will reset the voiceLocale.
      * @param outputFormat any {@link OUTPUT_FORMAT}
-     * @param voiceLocale (optional) any voice locale that is supported by the voice. See the list of all voices for compatibility. If not provided, the locale will be inferred from the `voiceName`
+     * @param metadataOptions (optional) {@link MetadataOptions}
      */
-    async setMetadata(voiceName: string, outputFormat: OUTPUT_FORMAT, voiceLocale?: string) {
+    async setMetadata(voiceName: string, outputFormat: OUTPUT_FORMAT, metadataOptions?: MetadataOptions): Promise<void> {
         const oldVoice = this._voice
-        const oldVoiceLocale = this._voiceLocale
         const oldOutputFormat = this._outputFormat
+        const oldOptions = JSON.stringify(this._metadataOptions)
 
         this._voice = voiceName
-        this._voiceLocale = voiceLocale
-        if (!this._voiceLocale) {
+        if (!this._metadataOptions.voiceLocale || (!metadataOptions.voiceLocale && oldVoice !== this._voice)) {
             const voiceLangMatch = MsEdgeTTS.VOICE_LANG_REGEX.exec(this._voice)
-            if (!voiceLangMatch) throw new Error("Could not infer voiceLocale from voiceName!")
-            this._voiceLocale = voiceLangMatch[0]
+            if (!voiceLangMatch) throw new Error("Could not infer voiceLocale from voiceName, and no voiceLocale was specified!")
+            this._metadataOptions.voiceLocale = voiceLangMatch[0]
         }
         this._outputFormat = outputFormat
 
+        Object.assign(this._metadataOptions, metadataOptions)
+
         const changed = oldVoice !== this._voice
-            || oldVoiceLocale !== this._voiceLocale
             || oldOutputFormat !== this._outputFormat
+            || oldOptions !== JSON.stringify(this._metadataOptions)
+
+        if (!changed && this._ws.readyState === this._ws.OPEN) {
+            return
+        }
 
         // create new client
-        if (changed || this._ws.readyState !== this._ws.OPEN) {
-            this._startTime = Date.now()
-            await this._initClient()
-        }
+        this._startTime = Date.now()
+        await this._initClient()
     }
 
     private _metadataCheck() {
@@ -252,13 +271,16 @@ export class MsEdgeTTS {
     /**
      * Writes raw audio synthesised from text to a file. Uses a basic {@link _SSMLTemplate SML template}.
      *
-     * @param path a valid output path, including a filename and file extension.
+     * @param dirPath a valid output directory path
      * @param input the input to synthesise
      * @param options (optional) {@link ProsodyOptions}
-     * @returns {Promise<string>} - a `Promise` with the full filepath
+     @returns {Promise<{audioFilePath: string, metadataFilePath: string}>} - a `Promise` with the full filepaths
      */
-    toFile(path: string, input: string, options?: ProsodyOptions): Promise<string> {
-        return this._rawSSMLRequestToFile(path, this._SSMLTemplate(input, options))
+    toFile(dirPath: string, input: string, options?: ProsodyOptions): Promise<{
+        audioFilePath: string,
+        metadataFilePath: string
+    }> {
+        return this._rawSSMLRequestToFile(dirPath, this._SSMLTemplate(input, options))
     }
 
     /**
@@ -276,12 +298,12 @@ export class MsEdgeTTS {
     /**
      * Writes raw audio synthesised from text to a file. Has no SSML template. Basic SSML should be provided in the request.
      *
-     * @param path a valid output path, including a filename and file extension.
+     * @param dirPath a valid output directory path.
      * @param requestSSML the SSML to send. SSML elements required in order to work.
-     * @returns {Promise<string>} - a `Promise` with the full filepath
+     * @returns {Promise<{audioFilePath: string, metadataFilePath: string}>} - a `Promise` with the full filepaths
      */
-    rawToFile(path: string, requestSSML: string): Promise<string> {
-        return this._rawSSMLRequestToFile(path, requestSSML)
+    rawToFile(dirPath: string, requestSSML: string): Promise<{ audioFilePath: string, metadataFilePath: string }> {
+        return this._rawSSMLRequestToFile(dirPath, requestSSML)
     }
 
     /**
@@ -295,29 +317,55 @@ export class MsEdgeTTS {
         return audioStream
     }
 
-    private _rawSSMLRequestToFile(path: string, requestSSML: string): Promise<string> {
-        return new Promise(async (resolve, reject) => {
-            const {audioStream, requestId} = this._rawSSMLRequest(requestSSML)
+    private async _rawSSMLRequestToFile(dirPath: string, requestSSML: string): Promise<{
+        audioFilePath: string,
+        metadataFilePath: string
+    }> {
+        const {audioStream, metadataStream, requestId} = this._rawSSMLRequest(requestSSML)
 
-            const writableFile = audioStream.pipe(fs.createWriteStream(path))
-
-            writableFile.once("close", async () => {
-                if (writableFile.bytesWritten > 0) {
-                    resolve(path)
-                } else {
-                    fs.unlinkSync(path)
-                    reject("No audio data received")
-                }
-            })
-
-            audioStream.on("error", (e) => {
-                audioStream.destroy()
-                reject(e)
-            })
-        })
+        try {
+            const [audioFilePath, metadataFilePath] = await Promise.all([
+                new Promise((resolve, reject) => {
+                    const writableAudioFile = audioStream.pipe(fs.createWriteStream(dirPath+ "/example_audio.webm"))
+                    writableAudioFile.once("close", async () => {
+                        if (writableAudioFile.bytesWritten > 0) {
+                            resolve(dirPath + "/example_audio.webm")
+                        } else {
+                            reject("No audio data received")
+                        }
+                    })
+                    metadataStream.once("error", reject)
+                }) as Promise<string>,
+                new Promise((resolve, reject) => {
+                    // get metadata from buffer and combine all MetaData root elements
+                    const metadataItems = []
+                    metadataStream.on("data", (chunk: Buffer) => {
+                        const chunkObj = JSON.parse(chunk.toString())
+                        // .Metadata is an array of objects, just combine them
+                        metadataItems.push(...chunkObj["Metadata"])
+                    })
+                    metadataStream.on("close", () => {
+                        // create file if not exists
+                        const metadataFilePath = dirPath + "/example_metadata.json"
+                        fs.writeFileSync(metadataFilePath, JSON.stringify(metadataItems, null, 2))
+                        resolve(metadataFilePath)
+                    })
+                    metadataStream.once("error", reject)
+                }) as Promise<string>,
+            ])
+            return {audioFilePath, metadataFilePath}
+        } catch (e) {
+            audioStream.destroy()
+            metadataStream.destroy()
+            throw e
+        }
     }
 
-    private _rawSSMLRequest(requestSSML: string): { audioStream: Readable, metadataStream: Readable, requestId: string } {
+    private _rawSSMLRequest(requestSSML: string): {
+        audioStream: Readable,
+        metadataStream: Readable,
+        requestId: string
+    } {
         this._metadataCheck()
 
         const requestId = randomBytes(16).toString("hex")
@@ -335,6 +383,11 @@ export class MsEdgeTTS {
         const metadataStream = new Readable({
             read() {
             },
+        })
+
+        audioStream.on("error", (e) => {
+            audioStream.destroy()
+            metadataStream.destroy()
         })
         audioStream.once("close", () => {
             audioStream.destroy()

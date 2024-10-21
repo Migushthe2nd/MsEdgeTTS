@@ -2,7 +2,7 @@ import "jest"
 import {MsEdgeTTS} from "./MsEdgeTTS"
 import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT"
 import {readFileSync, mkdirSync} from "fs"
-import {existsSync, unlinkSync} from "node:fs"
+import {existsSync} from "node:fs"
 import {tmpdir} from "os"
 import {join} from "path"
 import randomBytes from "randombytes"
@@ -23,14 +23,28 @@ describe("MsEdgeTTS", () => {
     })
 
     it("should write audio to file", async () => {
-        const filePath = await tts.toFile(join(tmpPath, "./example_audio.webm"), "Hi, how are you?")
-        console.log("Done!", filePath)
+        const {audioFilePath} = await tts.toFile(join(tmpPath), "Hi, how are you doing today hello hello hello?")
+        console.log("Done!", audioFilePath)
 
-        expect(filePath).toBeDefined()
-        expect(filePath).toMatch(/example_audio.webm/)
+        expect(audioFilePath).toBeDefined()
+        expect(audioFilePath).toMatch(/example_audio.webm/)
         expect(Object.keys(tts["_streams"]).length).toBe(0)
         // have content
-        expect(readFileSync(filePath).length).toBeGreaterThan(0)
+        expect(readFileSync(audioFilePath).length).toBeGreaterThan(0)
+    })
+
+    it("should write metadata to file", async () => {
+        await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {
+            sentenceBoundaryEnabled: true,
+        })
+        const {metadataFilePath} = await tts.toFile(join(tmpPath), "Hi, how are you doing today hello hello hello?")
+        console.log("Done!", metadataFilePath)
+        //
+        // expect(metadataFilePath).toBeDefined()
+        // expect(metadataFilePath).toMatch(/.json$/)
+        // expect(Object.keys(tts["_streams"]).length).toBe(0)
+        // have content
+        // expect(readFileSync(metadataFilePath).length).toBeGreaterThan(0)
     })
 
     it("should handle multiple streams simultaneously", async () => {
@@ -75,14 +89,14 @@ describe("MsEdgeTTS", () => {
     // })
 
     it("should return different audio when a pitch is applied", async () => {
-        const filePath = await tts.toFile(join(tmpPath, `./example_audio4.webm`), "Hi, how are you?", {pitch: "+10Hz"})
-        console.log("Done!", filePath)
+        const {audioFilePath} = await tts.toFile(join(tmpPath, `./example_audio4.webm`), "Hi, how are you?", {pitch: "+10Hz"})
+        console.log("Done!", audioFilePath)
 
-        expect(filePath).toBeDefined()
-        expect(filePath).toMatch(/example_audio4.webm/)
+        expect(audioFilePath).toBeDefined()
+        expect(audioFilePath).toMatch(/example_audio4.webm/)
         expect(Object.keys(tts["_streams"]).length).toBe(0)
         // have content
-        expect(readFileSync(filePath).length).toBeGreaterThan(0)
+        expect(readFileSync(audioFilePath).length).toBeGreaterThan(0)
     })
 
     afterEach(() => {
