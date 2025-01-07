@@ -88,7 +88,7 @@ import {SocksProxyAgent} from 'socks-proxy-agent';
 import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 
 (async () => {
-    const tts = new MsEdgeTTS(agent);
+    const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {
         wordBoundaryEnabled: true,
         sentenceBoundaryEnabled: true
