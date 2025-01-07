@@ -18,7 +18,7 @@ A simple Azure Speech Service module that uses the Microsoft Edge Read Aloud API
 
 Documentation on the SSML
 format [can be found here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup)
-. All supported audio formats [can be found here](./src/OUTPUT_FORMAT.ts).
+. All supported audio formats [can be found here](./src/Output.ts).
 
 ## Example usage
 
