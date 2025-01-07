@@ -32,14 +32,14 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 
 const tts = new MsEdgeTTS();
 await tts.setMetadata("en-IE-ConnorNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
-const readable = tts.toStream("Hi, how are you?");
+const {audioStream} = tts.toStream("Hi, how are you?");
 
-readable.on("data", (data) => {
+audioStream.on("data", (data) => {
     console.log("DATA RECEIVED", data);
     // raw audio file data
 });
 
-readable.on("close", () => {
+audioStream.on("close", () => {
     console.log("STREAM CLOSED");
 });
 ```
@@ -52,7 +52,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 (async () => {
     const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
-    const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");  
+    const {audioFilePath} = await tts.toFile("./tmpfolder", "Hi, how are you?");  
 })();
 ```
 
@@ -63,7 +63,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 (async () => {
     const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
-    const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?", {rate: 0.5, pitch: "+200Hz"});
+    const {audioStream} = await tts.toStream("Hi, how are you?", {rate: 0.5, pitch: "+200Hz"});
 })();
 ```
 
@@ -71,13 +71,57 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
 
 ```js
+import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 import {SocksProxyAgent} from 'socks-proxy-agent';
 
 (async () => {
     const agent = new SocksProxyAgent("socks://your-name%40gmail.com:abcdef12345124@br41.nordvpn.com")
     const tts = new MsEdgeTTS(agent);
     await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
-    const filePath = await tts.toFile("./example_audio.webm", "Hi, how are you?");
+    const {audioStream} = await tts.toStream("Hi, how are you?");
+})();
+```
+
+### Get sentence and word boundaries
+
+```js
+import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
+
+(async () => {
+    const tts = new MsEdgeTTS(agent);
+    await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {
+        wordBoundaryEnabled: true,
+        sentenceBoundaryEnabled: true
+    });
+    // as stream
+    const {metadataStream} = await tts.toStream("Hi, how are you doing today hello hello hello?");
+    /* ->
+        {
+          "Metadata": [
+            {
+              "Type": "SentenceBoundary",
+              "Data": {
+                "Offset": 1000000,
+                "Duration": 35875000,
+                "text": {
+                  "Text": "Hi, how are you doing today hello hello hello?",
+                  "Length": 46,
+                  "BoundaryType": "SentenceBoundary"
+                }
+              }
+            }
+          ]
+        }
+     */
+    // or as file
+    const {metadataFilePath} = await tts.toFile("Hi, how are you?");
+    /* ->
+       {
+          "Metadata": [
+            <all metadata combined>
+          ]
+        }
+     */
 })();
 ```
 
