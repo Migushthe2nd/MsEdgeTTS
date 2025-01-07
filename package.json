@@ -13,7 +13,7 @@
         "dev": "yarn run build && ts-node src/test/test.ts",
         "build": "tsc",
         "prepublishOnly": "yarn run build",
-        "publish": "yarn publish --access=public",
+        "publish": "pnpm publish --access=public",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:cov": "jest --coverage",
