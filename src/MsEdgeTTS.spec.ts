@@ -18,7 +18,7 @@ describe("MsEdgeTTS", () => {
     })
 
     beforeEach(async () => {
-        tts = new MsEdgeTTS(null, true)
+        tts = new MsEdgeTTS({enableLogger: true})
     })
 
     it("should write audio to file", async () => {

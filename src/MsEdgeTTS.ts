@@ -45,6 +45,18 @@ enum messageTypes {
     SSML = "ssml",
 }
 
+/**
+ * MsEdgeTTS constructor options
+ */
+type Options = {
+    /**
+     * (optional, **NOT SUPPORTED IN BROWSER**) Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
+     * */
+    agent?: Agent,
+    /** whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console */
+    enableLogger?: boolean
+}
+
 export class MsEdgeTTS {
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
@@ -71,12 +83,11 @@ export class MsEdgeTTS {
     /**
      * Create a new `MsEdgeTTS` instance.
      *
-     * @param agent (optional, **NOT SUPPORTED IN BROWSER**) Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
-     * @param enableLogger=false whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console
+     * @param options (optional) {@link Options}
      */
-    public constructor(agent?: Agent, enableLogger: boolean = false) {
-        this._agent = agent
-        this._enableLogger = enableLogger
+    public constructor(options?: Options) {
+        this._agent = options?.agent || undefined
+        this._enableLogger = options?.enableLogger || false
         this._isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined"
     }
 
