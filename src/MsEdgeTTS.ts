@@ -345,14 +345,14 @@ export class MsEdgeTTS {
                         return resolve(null)
                     }
                     // get metadata from buffer and combine all MetaData root elements
-                    const metadataItems = []
+                    const metadataItems = {Metadata: []}
                     metadataStream.on("data", (chunk: Buffer) => {
                         const chunkObj = JSON.parse(chunk.toString())
                         // .Metadata is an array of objects, just combine them
-                        metadataItems.push(...chunkObj["Metadata"])
+                        metadataItems.Metadata.push(...chunkObj["Metadata"])
                     })
                     metadataStream.once("close", () => {
-                        if (metadataItems.length > 0) {
+                        if (metadataItems.Metadata.length > 0) {
                             // create file if not exists
                             fs.writeFileSync(metadataFilePath, JSON.stringify(metadataItems, null, 2))
                             resolve(metadataFilePath)

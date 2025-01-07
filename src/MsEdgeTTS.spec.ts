@@ -104,9 +104,9 @@ describe("MsEdgeTTS", () => {
 
     afterAll(() => {
         tts.close()
-        if (existsSync(tmpPath)) {
-            unlinkSync(tmpPath)
-        }
+        // if (existsSync(tmpPath)) {
+        //     unlinkSync(tmpPath)
+        // }
     })
 
 })
