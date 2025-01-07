@@ -1,8 +1,3 @@
-import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT";
-import {MsEdgeTTS} from "./MsEdgeTTS";
-
-export {MsEdgeTTS, Voice, ProsodyOptions} from "./MsEdgeTTS"
-export {OUTPUT_FORMAT} from "./OUTPUT_FORMAT"
-export {PITCH} from "./PITCH"
-export {RATE} from "./RATE"
-export {VOLUME} from "./VOLUME"
+export * from "./MsEdgeTTS"
+export * as Output from "./Output"
+export * as Prosody from "./Prosody"

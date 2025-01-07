@@ -1,14 +1,13 @@
 import axios from "axios"
 import WebSocket from "isomorphic-ws"
-import {Buffer} from "buffer/" // slash is important for browser compatibility
+import {Buffer} from "buffer/index" // /index is important for browser compatibility
 import randomBytes from "randombytes"
-import {OUTPUT_FORMAT} from "./OUTPUT_FORMAT"
+import {OUTPUT_EXTENSIONS, OUTPUT_FORMAT} from "./Output"
 import {Readable} from "stream"
 import * as fs from "fs"
 import {Agent} from "http"
-import {PITCH} from "./PITCH"
-import {RATE} from "./RATE"
-import {VOLUME} from "./VOLUME"
+import {ProsodyOptions} from "./Prosody"
+import {join} from "path"
 
 export type Voice = {
     Name: string;
@@ -18,27 +17,6 @@ export type Voice = {
     SuggestedCodec: string;
     FriendlyName: string;
     Status: string;
-}
-
-export class ProsodyOptions {
-    /**
-     * The pitch to use.
-     * Can be any {@link PITCH}, or a relative frequency in Hz (+50Hz), a relative semitone (+2st), or a relative percentage (+50%).
-     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,pitch,-Indicates%20the%20baseline)
-     */
-    pitch?: PITCH | string = "+0Hz"
-    /**
-     * The rate to use.
-     * Can be any {@link RATE}, or a relative number (0.5), or string with a relative percentage (+50%).
-     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,rate,-Indicates%20the%20speaking)
-     */
-    rate?: RATE | string | number = 1.0
-    /**
-     * The volume to use.
-     * Can be any {@link VOLUME}, or an absolute number (0, 100), a string with a relative number (+50), or a relative percentage (+50%).
-     * [SSML documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice#:~:text=Optional-,volume,-Indicates%20the%20volume)
-     */
-    volume?: VOLUME | string | number = 100.0
 }
 
 export class MetadataOptions {
@@ -68,7 +46,6 @@ enum messageTypes {
 }
 
 export class MsEdgeTTS {
-    static OUTPUT_FORMAT = OUTPUT_FORMAT
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
     private static SYNTH_URL = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
@@ -223,6 +200,7 @@ export class MsEdgeTTS {
      * Sets the required information for the speech to be synthesised and inits a new WebSocket connection.
      * Must be called at least once before text can be synthesised.
      * Saved in this instance. Can be called at any time times to update the metadata.
+     * Merges specified values into previously provided values.
      *
      * @param voiceName a string with any `ShortName`. A list of all available neural voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#neural-voices). However, it is not limited to neural voices: standard voices can also be used. A list of standard voices can be found [here](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support#standard-voices). Changing the voiceName will reset the voiceLocale.
      * @param outputFormat any {@link OUTPUT_FORMAT}
@@ -265,7 +243,7 @@ export class MsEdgeTTS {
      * Close the WebSocket connection.
      */
     close() {
-        this._ws.close()
+        this._ws?.close()
     }
 
     /**
@@ -274,11 +252,11 @@ export class MsEdgeTTS {
      * @param dirPath a valid output directory path
      * @param input the input to synthesise
      * @param options (optional) {@link ProsodyOptions}
-     @returns {Promise<{audioFilePath: string, metadataFilePath: string}>} - a `Promise` with the full filepaths
+     @returns {Promise<{audioFilePath: string, metadataFilePath: string | null}>} - a `Promise` with the full filepaths
      */
     toFile(dirPath: string, input: string, options?: ProsodyOptions): Promise<{
         audioFilePath: string,
-        metadataFilePath: string
+        metadataFilePath: string | null
     }> {
         return this._rawSSMLRequestToFile(dirPath, this._SSMLTemplate(input, options))
     }
@@ -288,11 +266,13 @@ export class MsEdgeTTS {
      *
      * @param input the text to synthesise. Can include SSML elements.
      * @param options (optional) {@link ProsodyOptions}
-     * @returns {Readable} - a `stream.Readable` with the audio data
+     @returns {Promise<{audioStream: Readable, metadataStream: Readable | null}>} - a `Promise` with the streams
      */
-    toStream(input: string, options?: ProsodyOptions): Readable {
-        const {audioStream} = this._rawSSMLRequest(this._SSMLTemplate(input, options))
-        return audioStream
+    toStream(input: string, options?: ProsodyOptions): {
+        audioStream: Readable,
+        metadataStream: Readable | null,
+    } {
+        return this._rawSSMLRequest(this._SSMLTemplate(input, options))
     }
 
     /**
@@ -300,9 +280,12 @@ export class MsEdgeTTS {
      *
      * @param dirPath a valid output directory path.
      * @param requestSSML the SSML to send. SSML elements required in order to work.
-     * @returns {Promise<{audioFilePath: string, metadataFilePath: string}>} - a `Promise` with the full filepaths
+     * @returns {Promise<{audioFilePath: string, metadataFilePath: string | null}>} - a `Promise` with the full filepaths
      */
-    rawToFile(dirPath: string, requestSSML: string): Promise<{ audioFilePath: string, metadataFilePath: string }> {
+    rawToFile(dirPath: string, requestSSML: string): Promise<{
+        audioFilePath: string,
+        metadataFilePath: string | null
+    }> {
         return this._rawSSMLRequestToFile(dirPath, requestSSML)
     }
 
@@ -310,33 +293,46 @@ export class MsEdgeTTS {
      * Writes raw audio synthesised from a request in real-time to a {@link Readable}. Has no SSML template. Basic SSML should be provided in the request.
      *
      * @param requestSSML the SSML to send. SSML elements required in order to work.
-     * @returns {Readable} - a `stream.Readable` with the audio data
+     @returns {Promise<{audioStream: Readable, metadataStream: Readable | null}>} - a `Promise` with the streams
      */
-    rawToStream(requestSSML: string): Readable {
-        const {audioStream} = this._rawSSMLRequest(requestSSML)
-        return audioStream
+    rawToStream(requestSSML: string): {
+        audioStream: Readable,
+        metadataStream: Readable | null,
+    } {
+        return this._rawSSMLRequest(requestSSML)
+    }
+
+    private _hasMetadataBoundaries() {
+        return this._metadataOptions.sentenceBoundaryEnabled
+            || this._metadataOptions.wordBoundaryEnabled
     }
 
     private async _rawSSMLRequestToFile(dirPath: string, requestSSML: string): Promise<{
         audioFilePath: string,
-        metadataFilePath: string
+        metadataFilePath: string | null,
+        requestId: string,
     }> {
         const {audioStream, metadataStream, requestId} = this._rawSSMLRequest(requestSSML)
-
+        const audioFilePath = join(dirPath, "audio." + OUTPUT_EXTENSIONS[this._outputFormat])
+        const metadataFilePath = !!metadataStream ? join(dirPath, "metadata.json") : null
         try {
-            const [audioFilePath, metadataFilePath] = await Promise.all([
+            await Promise.all([
                 new Promise((resolve, reject) => {
-                    const writableAudioFile = audioStream.pipe(fs.createWriteStream(dirPath+ "/example_audio.webm"))
+                    const writableAudioFile = audioStream.pipe(fs.createWriteStream(audioFilePath))
                     writableAudioFile.once("close", async () => {
                         if (writableAudioFile.bytesWritten > 0) {
-                            resolve(dirPath + "/example_audio.webm")
+                            resolve(audioFilePath)
                         } else {
                             reject("No audio data received")
+                            fs.unlinkSync(audioFilePath)
                         }
                     })
-                    metadataStream.once("error", reject)
+                    writableAudioFile.once("error", reject)
                 }) as Promise<string>,
                 new Promise((resolve, reject) => {
+                    if (!metadataFilePath) {
+                        return resolve(null)
+                    }
                     // get metadata from buffer and combine all MetaData root elements
                     const metadataItems = []
                     metadataStream.on("data", (chunk: Buffer) => {
@@ -344,26 +340,30 @@ export class MsEdgeTTS {
                         // .Metadata is an array of objects, just combine them
                         metadataItems.push(...chunkObj["Metadata"])
                     })
-                    metadataStream.on("close", () => {
-                        // create file if not exists
-                        const metadataFilePath = dirPath + "/example_metadata.json"
-                        fs.writeFileSync(metadataFilePath, JSON.stringify(metadataItems, null, 2))
-                        resolve(metadataFilePath)
+                    metadataStream.once("close", () => {
+                        if (metadataItems.length > 0) {
+                            // create file if not exists
+                            fs.writeFileSync(metadataFilePath, JSON.stringify(metadataItems, null, 2))
+                            resolve(metadataFilePath)
+                        } else {
+                            reject("No metadata received")
+                            fs.unlinkSync(metadataFilePath)
+                        }
                     })
                     metadataStream.once("error", reject)
                 }) as Promise<string>,
             ])
-            return {audioFilePath, metadataFilePath}
+            return {audioFilePath, metadataFilePath, requestId}
         } catch (e) {
             audioStream.destroy()
-            metadataStream.destroy()
+            metadataStream?.destroy()
             throw e
         }
     }
 
     private _rawSSMLRequest(requestSSML: string): {
         audioStream: Readable,
-        metadataStream: Readable,
+        metadataStream: Readable | null,
         requestId: string
     } {
         this._metadataCheck()
@@ -380,18 +380,19 @@ export class MsEdgeTTS {
                 callback(error)
             },
         })
-        const metadataStream = new Readable({
+
+        const metadataStream = this._hasMetadataBoundaries() ? new Readable({
             read() {
             },
-        })
+        }) : null
 
         audioStream.on("error", (e) => {
             audioStream.destroy()
-            metadataStream.destroy()
+            metadataStream?.destroy()
         })
         audioStream.once("close", () => {
             audioStream.destroy()
-            metadataStream.destroy()
+            metadataStream?.destroy()
         })
 
         this._streams[requestId] = {
