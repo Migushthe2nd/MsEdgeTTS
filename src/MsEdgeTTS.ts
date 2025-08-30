@@ -92,13 +92,12 @@ export class MsEdgeTTS {
     }
 
     private static async getSynthUrl(): Promise<string> {
-        const instance = new MsEdgeTTS();
-        const req_id = instance.generateUUID(); // Generate the request ID
-        const secMsGEC = await new MsEdgeTTS().generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
+        const req_id = MsEdgeTTS.generateUUID(); // Generate the request ID
+        const secMsGEC = await MsEdgeTTS.generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
         return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${req_id}`;
     }
 
-    private generateUUID(): string {
+    private static generateUUID(): string {
         return 'xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -106,7 +105,7 @@ export class MsEdgeTTS {
         });
     }
 
-    private async generateSecMsGec(trustedClientToken: string): Promise<string> {
+    private static async generateSecMsGec(trustedClientToken: string): Promise<string> {
         const ticks = Math.floor(Date.now() / 1000) + 11644473600
         const rounded = ticks - (ticks % 300)
         const windowsTicks = rounded * 10000000
