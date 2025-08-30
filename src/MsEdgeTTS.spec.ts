@@ -5,16 +5,21 @@ import {mkdirSync, readFileSync} from "fs"
 import {existsSync, unlinkSync} from "node:fs"
 import {tmpdir} from "os"
 import {join} from "path"
-import randomBytes from "randombytes"
 
 describe("MsEdgeTTS", () => {
     let tts: MsEdgeTTS
     let tmpPath: string
 
     beforeAll(() => {
-        tmpPath = join(tmpdir(), randomBytes(16).toString("hex"))
+        tmpPath = join(tmpdir(), "msetts-test")
         mkdirSync(tmpPath)
         console.log(tmpPath)
+    })
+
+    afterAll(() => {
+        if (existsSync(tmpPath)) {
+            unlinkSync(tmpPath)
+        }
     })
 
     beforeEach(async () => {
