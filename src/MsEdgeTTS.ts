@@ -60,7 +60,7 @@ type Options = {
 export class MsEdgeTTS {
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
-    private static SYNTH_URL = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
+    private static WSS_URL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/
@@ -91,6 +91,35 @@ export class MsEdgeTTS {
         this._isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined"
     }
 
+    private static async getSynthUrl(): Promise<string> {
+        const req_id = MsEdgeTTS.generateUUID(); // Generate the request ID
+        const secMsGEC = await MsEdgeTTS.generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
+        return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${req_id}`;
+    }
+
+    private static generateUUID(): string {
+        return 'xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    private static async generateSecMsGec(trustedClientToken: string): Promise<string> {
+        const ticks = Math.floor(Date.now() / 1000) + 11644473600
+        const rounded = ticks - (ticks % 300)
+        const windowsTicks = rounded * 10000000
+
+        const encoder = new TextEncoder()
+        const data = encoder.encode(`${windowsTicks}${trustedClientToken}`)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('')
+            .toUpperCase()
+    }
+    
     private async _send(message) {
         for (let i = 1; i <= 3 && this._ws.readyState !== this._ws.OPEN; i++) {
             if (i == 1) {
@@ -104,10 +133,11 @@ export class MsEdgeTTS {
         })
     }
 
-    private _initClient() {
+    private async _initClient() {
+        const synthUrl = await MsEdgeTTS.getSynthUrl();
         this._ws = this._isBrowser
-            ? new WebSocket(MsEdgeTTS.SYNTH_URL)
-            : new WebSocket(MsEdgeTTS.SYNTH_URL, {agent: this._agent})
+            ? new WebSocket(synthUrl)
+            : new WebSocket(synthUrl, {agent: this._agent})
 
         this._ws.binaryType = "arraybuffer"
         return new Promise((resolve, reject) => {
