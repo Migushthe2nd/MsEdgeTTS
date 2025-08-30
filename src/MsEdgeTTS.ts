@@ -6,7 +6,7 @@ import {Readable} from "stream"
 import * as fs from "fs"
 import {Agent} from "http"
 import {ProsodyOptions} from "./Prosody"
-import {join} from "path"
+import {joinPath} from "./utils";
 
 export type Voice = {
     Name: string;
@@ -353,8 +353,8 @@ export class MsEdgeTTS {
         requestId: string,
     }> {
         const {audioStream, metadataStream, requestId} = this._rawSSMLRequest(requestSSML)
-        const audioFilePath = join(dirPath, "audio." + OUTPUT_EXTENSIONS[this._outputFormat])
-        const metadataFilePath = !!metadataStream ? join(dirPath, "metadata.json") : null
+        const audioFilePath = joinPath(dirPath, "audio." + OUTPUT_EXTENSIONS[this._outputFormat])
+        const metadataFilePath = !!metadataStream ? joinPath(dirPath, "metadata.json") : null
         try {
             await Promise.all([
                 new Promise((resolve, reject) => {
