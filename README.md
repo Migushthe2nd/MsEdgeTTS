@@ -3,6 +3,7 @@
 
 **[Update Dec 2025]**  
 The Read Aloud API now requires a user agent matching the Microsoft Edge browser, and thus will not work in browsers other than Microsoft Edge.
+It will of course still work in any server-side runtime.
 
 A simple Azure Speech Service module that uses the Microsoft Edge Read Aloud API.
 
