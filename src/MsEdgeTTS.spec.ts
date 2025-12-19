@@ -1,9 +1,8 @@
 import "jest"
 import {MsEdgeTTS} from "./MsEdgeTTS"
 import {OUTPUT_EXTENSIONS, OUTPUT_FORMAT} from "./Output"
-import {mkdirSync, readFileSync} from "fs"
-import {existsSync, unlinkSync} from "node:fs"
-import {tmpdir} from "os"
+import {mkdirSync, readFileSync, rmSync} from "fs"
+import {existsSync} from "node:fs"
 import {join} from "path"
 
 describe("MsEdgeTTS", () => {
@@ -11,14 +10,14 @@ describe("MsEdgeTTS", () => {
     let tmpPath: string
 
     beforeAll(() => {
-        tmpPath = join(tmpdir(), "msetts-test")
+        tmpPath = join("./", "msedgetts-test")
         mkdirSync(tmpPath)
         console.log(tmpPath)
     })
 
     afterAll(() => {
         if (existsSync(tmpPath)) {
-            unlinkSync(tmpPath)
+            rmSync(tmpPath, { recursive: true, force: true })
         }
     })
 

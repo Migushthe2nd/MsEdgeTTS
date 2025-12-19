@@ -93,7 +93,7 @@ export class MsEdgeTTS {
     private static async getSynthUrl(): Promise<string> {
         const req_id = MsEdgeTTS.generateUUID(); // Generate the request ID
         const secMsGEC = await MsEdgeTTS.generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
-        return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-130.0.2849.68&ConnectionId=${req_id}`;
+        return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
     }
 
     private static generateUUID(): string {
@@ -134,9 +134,14 @@ export class MsEdgeTTS {
 
     private async _initClient() {
         const synthUrl = await MsEdgeTTS.getSynthUrl();
+        const options = {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+            }
+        };
         this._ws = this._isBrowser
-            ? new WebSocket(synthUrl)
-            : new WebSocket(synthUrl, {agent: this._agent})
+            ? new WebSocket(synthUrl, options)
+            : new WebSocket(synthUrl, {...options, agent: this._agent})
 
         this._ws.binaryType = "arraybuffer"
         return new Promise((resolve, reject) => {
