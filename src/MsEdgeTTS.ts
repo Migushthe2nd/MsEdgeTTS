@@ -96,47 +96,12 @@ export class MsEdgeTTS {
         return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
     }
 
-    private static generateUUID(): string {
-        return 'xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
-    private static async generateSecMsGec(trustedClientToken: string): Promise<string> {
-        const ticks = Math.floor(Date.now() / 1000) + 11644473600
-        const rounded = ticks - (ticks % 300)
-        const windowsTicks = rounded * 10000000
-
-        const encoder = new TextEncoder()
-        const data = encoder.encode(`${windowsTicks}${trustedClientToken}`)
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('')
-            .toUpperCase()
-    }
-    
-    private async _send(message) {
-        for (let i = 1; i <= 3 && this._ws.readyState !== this._ws.OPEN; i++) {
-            if (i == 1) {
-                this._startTime = Date.now()
-            }
-            this._log("connecting: ", i)
-            await this._initClient()
-        }
-        this._ws.send(message, () => {
-            this._log("<-", message)
-        })
-    }
-
     private async _initClient() {
         const synthUrl = await MsEdgeTTS.getSynthUrl();
         const options = {
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0",
+                "Origin": "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
             }
         };
         this._ws = this._isBrowser
@@ -206,6 +171,42 @@ export class MsEdgeTTS {
             this._ws.onerror = function (error) {
                 reject("Connect Error: " + JSON.stringify(error, null, 2))
             }
+        })
+    }
+
+    private static generateUUID(): string {
+        return 'xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    private static async generateSecMsGec(trustedClientToken: string): Promise<string> {
+        const ticks = Math.floor(Date.now() / 1000) + 11644473600
+        const rounded = ticks - (ticks % 300)
+        const windowsTicks = rounded * 10000000
+
+        const encoder = new TextEncoder()
+        const data = encoder.encode(`${windowsTicks}${trustedClientToken}`)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('')
+            .toUpperCase()
+    }
+
+    private async _send(message) {
+        for (let i = 1; i <= 3 && this._ws.readyState !== this._ws.OPEN; i++) {
+            if (i == 1) {
+                this._startTime = Date.now()
+            }
+            this._log("connecting: ", i)
+            await this._initClient()
+        }
+        this._ws.send(message, () => {
+            this._log("<-", message)
         })
     }
 
