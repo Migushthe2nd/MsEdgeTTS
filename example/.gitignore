@@ -1,0 +1,4 @@
+config.json
+output/
+*.mp3
+.DS_Store

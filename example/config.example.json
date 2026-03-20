@@ -1,0 +1,8 @@
+{
+  "// 注意": "请复制此文件为 config.json 并填写您的邮箱和密码",
+  "user_email": "your-email@example.com",
+  "user_pass": "your-password",
+  "api_url": "https://ttspro.cn/getSpeek.php",
+  "kbitrate": "audio-16khz-32kbitrate-mono-mp3",
+  "output_format": "binary"
+}
