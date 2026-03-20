@@ -14,18 +14,29 @@ Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft E
 
 ```
 ./
-├── src/                    # 全部源代码
-│   ├── index.ts            # 主入口点（barrel exports）
-│   ├── MsEdgeTTS.ts        # 核心 TTS 类（457 行）
-│   ├── Output.ts           # 音频输出格式枚举
-│   ├── Prosody.ts          # 语速/音调/音量选项
-│   ├── utils.ts            # 工具函数（路径拼接）
-│   └── MsEdgeTTS.spec.ts   # 单元测试
+├── src/                          # 全部源代码（9 个 TypeScript 文件）
+│   ├── index.ts                  # 主入口点（barrel exports，6 个导出）
+│   ├── MsEdgeTTS.ts              # 核心 TTS 类（457 行，WebSocket 通信）
+│   ├── MsEdgeTTS.spec.ts         # 单元测试
+│   ├── Output.ts                 # 音频输出格式枚举 + 扩展名映射
+│   ├── Prosody.ts                # 语速/音调/音量选项类
+│   ├── DialogueTurn.ts           # 对话轮次类型定义
+│   ├── DialogueBuilder.ts        # 对话构建器类 + SSML 构建函数
+│   ├── SSMLUtils.ts              # SSML 工具函数（转义、验证）
+│   └── utils.ts                  # 路径拼接工具
+├── example/                      # 示例演示代码（6 个中文命名文件）
+│   ├── 00-简单对话演示.ts
+│   ├── 01-多说话人对话 - 链式调用.ts
+│   ├── 02-多说话人对话 - 函数式.ts
+│   ├── 03-31 种情感风格演示.ts
+│   ├── 04-情感强度控制演示.ts
+│   └── 05-文本替换功能演示.ts
 ├── .github/workflows/
-│   └── deploy_docs.yml     # CI/CD：文档部署到 gh-pages
-├── package.json            # 依赖 + Jest 配置
-├── tsconfig.json           # TypeScript 编译配置
-└── README.md               # API 文档
+│   └── deploy_docs.yml           # CI/CD：仅文档部署到 gh-pages
+├── docs/                         # 手动编写的 SSML 文档
+├── package.json                  # 依赖 + Jest 配置（内联）
+├── tsconfig.json                 # TypeScript 编译配置
+└── README.md                     # API 文档
 ```
 
 ## WHERE TO LOOK
