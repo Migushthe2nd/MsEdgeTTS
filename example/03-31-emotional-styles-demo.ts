@@ -1,3 +1,10 @@
+/**
+ * Example 3: 31 Emotional Styles Demo
+ * 
+ * Demonstrates all 31 emotional styles supported by Microsoft Azure Speech Service.
+ * Each style is showcased with a sample sentence.
+ */
+
 import { MsEdgeTTS, OUTPUT_FORMAT, buildDialogueSSML, type DialogueTurn } from "../src";
 import * as fs from "fs";
 import * as path from "path";
@@ -14,9 +21,9 @@ const allStyles = [
 ];
 
 function printStyleTable(styles: string[]): void {
-    console.log("\n所有情感风格列表:");
+    console.log("\nComplete Emotional Styles List:");
     console.log("┌────┬─────────────────────────────────────┐");
-    console.log("│ 序号 │ 风格名称                           │");
+    console.log("│ No. │ Style Name                         │");
     console.log("├────┼─────────────────────────────────────┤");
     
     styles.forEach((style, index) => {
@@ -30,7 +37,7 @@ function printStyleTable(styles: string[]): void {
 
 async function main(): Promise<void> {
     console.log("╔═══════════════════════════════════════════════╗");
-    console.log("║  示例 3: 31 种情感风格演示                   ║");
+    console.log("║  Example 3: 31 Emotional Styles Demo         ║");
     console.log("╚═══════════════════════════════════════════════╝");
     
     printStyleTable(allStyles);
@@ -44,8 +51,8 @@ async function main(): Promise<void> {
         email = config.email;
         password = config.password;
     } catch (error) {
-        console.error("错误：无法读取 config.json，请确保已创建配置文件");
-        console.error("提示：复制 config.example.json 为 config.json 并填写邮箱密码");
+        console.error("Error: Unable to read config.json. Please ensure the config file exists.");
+        console.error("Tip: Copy config.example.json to config.json and fill in your email and password.");
         process.exit(1);
     }
     
@@ -53,17 +60,17 @@ async function main(): Promise<void> {
     const voiceName = "zh-CN-XiaoxiaoNeural";
     const outputFormat = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
     
-    console.log(`\n使用语音：${voiceName}`);
-    console.log(`输出格式：MP3`);
+    console.log(`\nUsing voice: ${voiceName}`);
+    console.log(`Output format: MP3`);
     
     const turns: DialogueTurn[] = allStyles.map((style, index) => ({
         voice: voiceName,
-        text: `这是第${index + 1}种情感风格，${style}。`,
+        text: `This is style number ${index + 1}: ${style}.`,
         style: style
     }));
     
     const ssml = buildDialogueSSML(turns);
-    console.log(`\n生成的 SSML 长度：${ssml.length} 字符`);
+    console.log(`\nGenerated SSML length: ${ssml.length} characters`);
     
     try {
         await tts.setMetadata(voiceName, outputFormat);
@@ -73,18 +80,18 @@ async function main(): Promise<void> {
             fs.mkdirSync(outputDir, { recursive: true });
         }
         
-        const outputPath = path.join(outputDir, "03-31 种情感风格演示.mp3");
+        const outputPath = path.join(outputDir, "03-31-emotional-styles-demo.mp3");
         
-        console.log(`\n正在生成音频...`);
+        console.log(`\nGenerating audio...`);
         const { audioFilePath } = await tts.toFile(outputDir, ssml);
         
         fs.renameSync(audioFilePath, outputPath);
         
-        console.log(`\n✅ 音频已保存到：${outputPath}`);
-        console.log(`✅ 共生成 ${allStyles.length} 种情感风格演示`);
+        console.log(`\n✅ Audio saved to: ${outputPath}`);
+        console.log(`✅ Generated ${allStyles.length} emotional style demonstrations`);
         
     } catch (error) {
-        console.error("\n❌ 生成音频时出错:");
+        console.error("\n❌ Error generating audio:");
         if (error instanceof Error) {
             console.error(error.message);
         } else {

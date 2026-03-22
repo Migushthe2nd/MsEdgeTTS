@@ -3,46 +3,46 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * 示例 5: 文本替换功能演示
- * 演示 substitutions 参数，展示专业术语替换（W3C, HTTP, CEO 等）
+ * Example 5: Text Substitution Demo
+ * Demonstrates the substitutions parameter with technical term replacements (W3C, HTTP, CEO, etc.)
  */
 async function main() {
-    // 输出装饰框
+    // Output decorative box
     console.log("╔═══════════════════════════════════════════════╗");
-    console.log("║  示例 5: 文本替换功能演示                    ║");
+    console.log("║  Example 5: Text Substitution Demo           ║");
     console.log("╚═══════════════════════════════════════════════╝");
     console.log();
 
-    // 读取配置
+    // Read configuration
     const configPath = path.join(__dirname, "config.json");
     if (!fs.existsSync(configPath)) {
-        console.error("❌ 错误：config.json 不存在");
-        console.error("📝 请复制 config.example.json 为 config.json 并填写邮箱和密码");
-        console.error(`📁 示例文件位置：${configPath}`);
+        console.error("❌ Error: config.json does not exist");
+        console.error("📝 Please copy config.example.json to config.json and fill in email and password");
+        console.error(`📁 Example file location: ${configPath}`);
         process.exit(1);
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
-    // 输出 substitutions 说明
-    console.log("📖 substitutions 参数说明:");
+    // Output substitutions explanation
+    console.log("📖 substitutions Parameter Explanation:");
     console.log("┌──────────────────────────────────────────────┐");
-    console.log("│ 格式：{ text: string, alias: string }        │");
-    console.log("│ text: 原文中的词                             │");
-    console.log("│ alias: 朗读时使用的别名                      │");
-    console.log("│ SSML 生成 <sub alias=\"...\">text</sub> 标签   │");
+    console.log("│ Format: { text: string, alias: string }      │");
+    console.log("│ text: The word in the original text          │");
+    console.log("│ alias: The alias used during reading         │");
+    console.log("│ SSML generates <sub alias=\"...\">text</sub> tag│");
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 构建对话：演示专业术语替换
+    // Build dialogue: demonstrate technical term substitution
     const turns: DialogueTurn[] = [
         {
             voice: "zh-CN-XiaoxiaoNeural",
-            text: "W3C 制定了 Web 标准，API 基于 HTTP 协议",
+            text: "W3C develops Web standards, API is based on HTTP protocol",
             substitutions: [
-                { text: "W3C", alias: "万维网联盟" },
-                { text: "Web", alias: "万维网" },
-                { text: "HTTP", alias: "超文本传输协议" },
+                { text: "W3C", alias: "World Wide Web Consortium" },
+                { text: "Web", alias: "World Wide Web" },
+                { text: "HTTP", alias: "Hypertext Transfer Protocol" },
             ],
             style: "narration-professional",
         },
@@ -57,31 +57,34 @@ async function main() {
         },
     ];
 
-    // 显示替换前后的对比
-    console.log("📝 替换前后对比:");
+    // Display before/after substitution comparison
+    console.log("📝 Before/After Substitution Comparison:");
     console.log("┌──────────────────────────────────────────────┐");
-    console.log("│ 【中文部分】                                 │");
-    console.log("│ 原文：W3C 制定了 Web 标准，API 基于 HTTP 协议   │");
-    console.log("│ 朗读：万维网联盟制定了万维网标准，API 基于超文本 │");
-    console.log("│       传输协议                              │");
+    console.log("│ [Chinese Part]                               │");
+    console.log("│ Original: W3C develops Web standards, API is │");
+    console.log("│           based on HTTP protocol             │");
+    console.log("│ Reading: World Wide Web Consortium develops  │");
+    console.log("│          World Wide Web standards, API is    │");
+    console.log("│          based on Hypertext Transfer Protocol│");
     console.log("├──────────────────────────────────────────────┤");
-    console.log("│ 【英文部分】                                 │");
-    console.log("│ 原文：The CEO said: innovation drives success │");
-    console.log("│ 朗读：The Chief Executive Officer said:      │");
-    console.log("│       innovation drives success             │");
+    console.log("│ [English Part]                               │");
+    console.log("│ Original: The CEO said: innovation drives    │");
+    console.log("│           success                            │");
+    console.log("│ Reading:  The Chief Executive Officer said:  │");
+    console.log("│           innovation drives success          │");
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 显示替换规则列表
-    console.log("📋 替换规则列表:");
+    // Display substitution rules list
+    console.log("📋 Substitution Rules List:");
     console.log("┌──────────────────────────────────────────────┐");
-    console.log("│ 中文部分替换规则：                           │");
+    console.log("│ Chinese Part Substitution Rules:             │");
     turns[0].substitutions?.forEach((sub) => {
         const line = `│   "${sub.text}" → "${sub.alias}"`.padEnd(47) + "│";
         console.log(line);
     });
     console.log("├──────────────────────────────────────────────┤");
-    console.log("│ 英文部分替换规则：                           │");
+    console.log("│ English Part Substitution Rules:             │");
     turns[1].substitutions?.forEach((sub) => {
         const line = `│   "${sub.text}" → "${sub.alias}"`.padEnd(47) + "│";
         console.log(line);
@@ -89,11 +92,11 @@ async function main() {
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 生成 SSML
+    // Generate SSML
     const ssml = buildDialogueSSML(turns);
 
-    // SSML 预览
-    console.log("📄 SSML 预览:");
+    // SSML Preview
+    console.log("📄 SSML Preview:");
     console.log("┌──────────────────────────────────────────────┐");
     const ssmlLines = ssml.split("\n");
     for (const line of ssmlLines) {
@@ -103,15 +106,15 @@ async function main() {
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 输出路径
+    // Output path
     const outputDir = path.join(__dirname, "output");
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-    const outputPath = path.join(outputDir, "05-文本替换功能演示.mp3");
+    const outputPath = path.join(outputDir, "05-text-substitution-demo.mp3");
 
-    // 调用 TTS API
-    console.log("🎙️  正在调用 TTS API...");
+    // Call TTS API
+    console.log("🎙️  Calling TTS API...");
     
     try {
         const response = await fetch(config.api_url, {
@@ -126,23 +129,23 @@ async function main() {
         });
 
         if (!response.ok) {
-            throw new Error(`API 请求失败：${response.status} ${response.statusText}`);
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        // 保存文件
+        // Save file
         const buffer = Buffer.from(await response.arrayBuffer());
         fs.writeFileSync(outputPath, buffer);
 
-        // 计算文件大小
+        // Calculate file size
         const fileSizeKB = (buffer.length / 1024).toFixed(1);
 
-        console.log("✅ 音频生成成功！");
-        console.log(`📁 文件已保存：${outputPath}`);
-        console.log(`📊 文件大小：${fileSizeKB} KB`);
+        console.log("✅ Audio generation successful!");
+        console.log(`📁 File saved: ${outputPath}`);
+        console.log(`📊 File size: ${fileSizeKB} KB`);
         console.log();
-        console.log("💡 提示：播放音频对比替换前后的朗读效果");
+        console.log("💡 Tip: Play the audio to compare the reading effect before and after substitution");
     } catch (error) {
-        console.error("❌ 生成失败:", error instanceof Error ? error.message : error);
+        console.error("❌ Generation failed:", error instanceof Error ? error.message : error);
         process.exit(1);
     }
 }

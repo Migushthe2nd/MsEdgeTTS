@@ -3,74 +3,74 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * 示例 4: 情感强度控制演示
- * 演示 styleDegree 参数（范围 0.01-2.0）对情感表达的影响
+ * Example 4: Style Degree Control Demo
+ * Demonstrates the effect of styleDegree parameter (range 0.01-2.0) on emotional expression
  */
 async function main() {
-    // 输出装饰框
+    // Output decorative box
     console.log("╔═══════════════════════════════════════════════╗");
-    console.log("║  示例 4: 情感强度控制演示                    ║");
+    console.log("║  Example 4: Style Degree Control Demo        ║");
     console.log("╚═══════════════════════════════════════════════╝");
     console.log();
 
-    // 读取配置
+    // Read configuration
     const configPath = path.join(__dirname, "config.json");
     if (!fs.existsSync(configPath)) {
-        console.error("❌ 错误：config.json 不存在");
-        console.error("📝 请复制 config.example.json 为 config.json 并填写邮箱和密码");
-        console.error(`📁 示例文件位置：${configPath}`);
+        console.error("❌ Error: config.json does not exist");
+        console.error("📝 Please copy config.example.json to config.json and fill in your email and password");
+        console.error(`📁 Example file location: ${configPath}`);
         process.exit(1);
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
-    // 输出 styleDegree 说明
-    console.log("📖 styleDegree 参数说明:");
+    // Output styleDegree explanation
+    console.log("📖 styleDegree Parameter Explanation:");
     console.log("┌──────────────────────────────────────────────┐");
-    console.log("│ 范围：0.01 - 2.0                             │");
-    console.log("│ 0.5: 较弱的情感表达                          │");
-    console.log("│ 1.0: 正常情感表达（默认）                    │");
-    console.log("│ 2.0: 最强情感表达                            │");
+    console.log("│ Range: 0.01 - 2.0                            │");
+    console.log("│ 0.5: Weaker emotional expression             │");
+    console.log("│ 1.0: Normal emotional expression (default)   │");
+    console.log("│ 2.0: Strongest emotional expression          │");
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 构建对话：同一句话，三种不同强度
+    // Build dialogue: same sentence, three different intensities
     const turns: DialogueTurn[] = [
         {
             voice: "zh-CN-XiaomoNeural",
-            text: "这很正常",
+            text: "This is normal",
             style: "sad",
-            styleDegree: 0.5,  // 较弱
+            styleDegree: 0.5,  // Weaker
         },
         {
             voice: "zh-CN-XiaomoNeural",
-            text: "这真的很令人难过",
+            text: "This is really sad",
             style: "sad",
-            styleDegree: 1.0,  // 正常
+            styleDegree: 1.0,  // Normal
         },
         {
             voice: "zh-CN-XiaomoNeural",
-            text: "这简直太让人心碎了！",
+            text: "This is absolutely heartbreaking!",
             style: "sad",
-            styleDegree: 2.0,  // 最强
+            styleDegree: 2.0,  // Strongest
         },
     ];
 
-    // 显示对话内容
-    console.log("📝 对话内容:");
+    // Display dialogue content
+    console.log("📝 Dialogue Content:");
     console.log("┌──────────────────────────────────────────────┐");
     turns.forEach((turn, index) => {
-        const intensity = turn.styleDegree === 0.5 ? "较弱" : turn.styleDegree === 1.0 ? "正常" : "最强";
-        console.log(`│ ${index + 1}. [强度${intensity}] ${turn.text.padEnd(25)} │`);
+        const intensity = turn.styleDegree === 0.5 ? "Weaker" : turn.styleDegree === 1.0 ? "Normal" : "Strongest";
+        console.log(`│ ${index + 1}. [Intensity: ${intensity}] ${turn.text.padEnd(25)} │`);
     });
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 生成 SSML
+    // Generate SSML
     const ssml = buildDialogueSSML(turns);
 
-    // SSML 预览
-    console.log("📄 SSML 预览:");
+    // SSML preview
+    console.log("📄 SSML Preview:");
     console.log("┌──────────────────────────────────────────────┐");
     const ssmlLines = ssml.split("\n");
     for (const line of ssmlLines) {
@@ -80,15 +80,15 @@ async function main() {
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 输出路径
+    // Output path
     const outputDir = path.join(__dirname, "output");
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-    const outputPath = path.join(outputDir, "04-情感强度控制演示.mp3");
+    const outputPath = path.join(outputDir, "04-style-degree-control-demo.mp3");
 
-    // 调用 TTS API
-    console.log("🎙️  正在调用 TTS API...");
+    // Call TTS API
+    console.log("🎙️  Calling TTS API...");
     
     try {
         const response = await fetch(config.api_url, {
@@ -103,23 +103,23 @@ async function main() {
         });
 
         if (!response.ok) {
-            throw new Error(`API 请求失败：${response.status} ${response.statusText}`);
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        // 保存文件
+        // Save file
         const buffer = Buffer.from(await response.arrayBuffer());
         fs.writeFileSync(outputPath, buffer);
 
-        // 计算文件大小
+        // Calculate file size
         const fileSizeKB = (buffer.length / 1024).toFixed(1);
 
-        console.log("✅ 音频生成成功！");
-        console.log(`📁 文件已保存：${outputPath}`);
-        console.log(`📊 文件大小：${fileSizeKB} KB`);
+        console.log("✅ Audio generation successful!");
+        console.log(`📁 File saved: ${outputPath}`);
+        console.log(`📊 File size: ${fileSizeKB} KB`);
         console.log();
-        console.log("💡 提示：播放音频对比三种情感强度的差异");
+        console.log("💡 Tip: Play the audio to compare the differences between the three emotional intensities");
     } catch (error) {
-        console.error("❌ 生成失败:", error instanceof Error ? error.message : error);
+        console.error("❌ Generation failed:", error instanceof Error ? error.message : error);
         process.exit(1);
     }
 }

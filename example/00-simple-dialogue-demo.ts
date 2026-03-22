@@ -2,28 +2,28 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * 示例 0: 简单对话演示
- * 直接使用给定的 SSML 示例（女儿和父亲对话）
+ * Example 0: Simple Dialogue Demo
+ * Directly use the given SSML example (daughter-father conversation)
  */
 async function main() {
-    // 输出装饰框
+    // Output decorative box
     console.log("╔═══════════════════════════════════════════════╗");
-    console.log("║  示例 0: 简单对话演示                        ║");
+    console.log("║  Example 0: Simple Dialogue Demo              ║");
     console.log("╚═══════════════════════════════════════════════╝");
     console.log();
 
-    // 读取配置
+    // Read configuration
     const configPath = path.join(__dirname, "config.json");
     if (!fs.existsSync(configPath)) {
-        console.error("❌ 错误：config.json 不存在");
-        console.error("📝 请复制 config.example.json 为 config.json 并填写邮箱和密码");
-        console.error(`📁 示例文件位置：${configPath}`);
+        console.error("❌ Error: config.json does not exist");
+        console.error("📝 Please copy config.example.json to config.json and fill in your email and password");
+        console.error(`📁 Example file location: ${configPath}`);
         process.exit(1);
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
-    // 给定的 SSML 示例：女儿和父亲对话
+    // Given SSML example: daughter-father conversation
     const ssml = `<speak version="1.0"
     xmlns="http://www.w3.org/2001/10/synthesis"
     xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="zh-CN">
@@ -39,8 +39,8 @@ async function main() {
     </voice>
 </speak>`;
 
-    // 显示完整的 SSML
-    console.log("使用的 SSML:");
+    // Display the complete SSML
+    console.log("SSML Used:");
     console.log("┌──────────────────────────────────────────────┐");
     const ssmlLines = ssml.split("\n");
     for (const line of ssmlLines) {
@@ -50,15 +50,15 @@ async function main() {
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 输出路径
+    // Output path
     const outputDir = path.join(__dirname, "output");
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-    const outputPath = path.join(outputDir, "00-简单对话演示.mp3");
+    const outputPath = path.join(outputDir, "00-simple-dialogue-demo.mp3");
 
-    // 调用 TTS API
-    console.log("正在调用 TTS API...");
+    // Call TTS API
+    console.log("Calling TTS API...");
     
     try {
         const response = await fetch(config.api_url, {
@@ -73,21 +73,21 @@ async function main() {
         });
 
         if (!response.ok) {
-            throw new Error(`API 请求失败：${response.status} ${response.statusText}`);
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        // 保存文件
+        // Save file
         const buffer = Buffer.from(await response.arrayBuffer());
         fs.writeFileSync(outputPath, buffer);
 
-        // 计算文件大小
+        // Calculate file size
         const fileSizeKB = (buffer.length / 1024).toFixed(1);
 
-        console.log("✅ 音频生成成功！");
-        console.log(`📁 文件已保存：${outputPath}`);
-        console.log(`📊 文件大小：${fileSizeKB} KB`);
+        console.log("✅ Audio generation successful!");
+        console.log(`📁 File saved: ${outputPath}`);
+        console.log(`📊 File size: ${fileSizeKB} KB`);
     } catch (error) {
-        console.error("❌ 生成失败:", error instanceof Error ? error.message : error);
+        console.error("❌ Generation failed:", error instanceof Error ? error.message : error);
         process.exit(1);
     }
 }

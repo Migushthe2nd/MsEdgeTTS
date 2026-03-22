@@ -3,28 +3,28 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * 示例 2: 多说话人对话 - 函数式
- * 使用 buildDialogueSSML 函数构建中英混合客服对话
+ * Example 2: Multi-Speaker Dialogue - Functional
+ * Build Chinese-English mixed customer service dialogue using buildDialogueSSML function
  */
 async function main() {
-    // 输出装饰框
+    // Output decorative box
     console.log("╔═══════════════════════════════════════════════╗");
-    console.log("║  示例 2: 多说话人对话 - 函数式               ║");
+    console.log("║  Example 2: Multi-Speaker Dialogue - Functional ║");
     console.log("╚═══════════════════════════════════════════════╝");
     console.log();
 
-    // 读取配置
+    // Read configuration
     const configPath = path.join(__dirname, "config.json");
     if (!fs.existsSync(configPath)) {
-        console.error("❌ 错误：config.json 不存在");
-        console.error("📝 请复制 config.example.json 为 config.json 并填写邮箱和密码");
-        console.error(`📁 示例文件位置：${configPath}`);
+        console.error("❌ Error: config.json does not exist");
+        console.error("📝 Please copy config.example.json to config.json and fill in your email and password");
+        console.error(`📁 Example file location: ${configPath}`);
         process.exit(1);
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
-    // 构建对话：4 个说话人轮次（2 中文客服 + 2 英文客服）
+    // Build dialogue: 4 speaker turns (2 Chinese customer service + 2 English customer service)
     const turns: DialogueTurn[] = [
         {
             voice: "zh-CN-XiaoxiaoNeural",
@@ -50,14 +50,14 @@ async function main() {
         },
     ];
 
-    console.log(`构建的对话轮次：${turns.length} 个`);
+    console.log(`Building dialogue turns: ${turns.length}`);
     console.log();
 
-    // 生成 SSML
+    // Generate SSML
     const ssml = buildDialogueSSML(turns);
 
-    // SSML 预览
-    console.log("SSML 预览:");
+    // SSML preview
+    console.log("SSML Preview:");
     console.log("┌──────────────────────────────────────────────┐");
     const ssmlLines = ssml.split("\n");
     for (const line of ssmlLines) {
@@ -67,15 +67,15 @@ async function main() {
     console.log("└──────────────────────────────────────────────┘");
     console.log();
 
-    // 输出路径
+    // Output path
     const outputDir = path.join(__dirname, "output");
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-    const outputPath = path.join(outputDir, "02-客服对话 - 函数式.mp3");
+    const outputPath = path.join(outputDir, "02-customer-service-dialogue-functional.mp3");
 
-    // 调用 TTS API
-    console.log("正在调用 TTS API...");
+    // Call TTS API
+    console.log("Calling TTS API...");
     
     try {
         const response = await fetch(config.api_url, {
@@ -90,21 +90,21 @@ async function main() {
         });
 
         if (!response.ok) {
-            throw new Error(`API 请求失败：${response.status} ${response.statusText}`);
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
 
-        // 保存文件
+        // Save file
         const buffer = Buffer.from(await response.arrayBuffer());
         fs.writeFileSync(outputPath, buffer);
 
-        // 计算文件大小
+        // Calculate file size
         const fileSizeKB = (buffer.length / 1024).toFixed(1);
 
-        console.log("✅ 音频生成成功！");
-        console.log(`📁 文件已保存：${outputPath}`);
-        console.log(`📊 文件大小：${fileSizeKB} KB`);
+        console.log("✅ Audio generation successful!");
+        console.log(`📁 File saved: ${outputPath}`);
+        console.log(`📊 File size: ${fileSizeKB} KB`);
     } catch (error) {
-        console.error("❌ 生成失败:", error instanceof Error ? error.message : error);
+        console.error("❌ Generation failed:", error instanceof Error ? error.message : error);
         process.exit(1);
     }
 }
