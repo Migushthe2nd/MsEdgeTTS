@@ -1,16 +1,16 @@
-# TTS Pro API 示例代码
+# TTS Pro API Example Code
 
-## 快速开始
+## Quick Start
 
-### 1. 配置账户信息
+### 1. Configure Account Information
 
-复制配置模板并填写你的邮箱和密码：
+Copy the configuration template and fill in your email and password:
 
 ```bash
 cp config.example.json config.json
 ```
 
-编辑 `config.json`：
+Edit `config.json`:
 ```json
 {
   "user_email": "your-email@example.com",
@@ -21,13 +21,13 @@ cp config.example.json config.json
 }
 ```
 
-### 2. 编译项目
+### 2. Build Project
 
 ```bash
 pnpm run build
 ```
 
-### 3. 运行示例
+### 3. Run Examples
 
 ```bash
 # Example 1: Multi-Speaker Dialogue (Chained)
@@ -97,24 +97,24 @@ Demonstrate the `styleDegree` parameter (range: 0.01-2.0).
 Demonstrate the `substitutions` parameter for replacing technical terms.
 
 **Features**:
-- W3C → 万维网联盟
-- HTTP → 超文本传输协议
+- W3C → World Wide Web Consortium
+- HTTP → HyperText Transfer Protocol
 - CEO → Chief Executive Officer
 
 **Output**: `example/output/05-text-substitution-demo.mp3`
 
-## API 参数说明
+## API Parameters
 
-| 参数名 | 必填 | 说明 | 默认值 |
-|--------|------|------|--------|
-| `user_email` | ✅ | 用户邮箱 | - |
-| `user_pass` | ✅ | 用户密码 | - |
+| Parameter | Required | Description | Default |
+|-----------|----------|-------------|---------|
+| `user_email` | ✅ | User email | - |
+| `user_pass` | ✅ | User password | - |
 | `type` | ❌ | `getSpeek`/`getBig`/`setBig` | `getSpeek` |
-| `ssml` | ✅ | SSML 内容 | - |
-| `kbitrate` | ❌ | 音频质量 | `audio-16khz-32kbitrate-mono-mp3` |
-| `output_format` | ❌ | 返回类型：`二进制`/`url` | `二进制` |
+| `ssml` | ✅ | SSML content | - |
+| `kbitrate` | ❌ | Audio quality | `audio-16khz-32kbitrate-mono-mp3` |
+| `output_format` | ❌ | Return type: `binary`/`url` | `binary` |
 
-## 输出目录
+## Output Directory
 
 All generated audio files are saved in:
 ```
@@ -126,20 +126,20 @@ example/output/
 └── 05-text-substitution-demo.mp3
 ```
 
-## 注意事项
+## Notes
 
-1. **账户安全**: `config.json` 已被 `.gitignore` 忽略，不会提交到 Git
-2. **网络连接**: 运行示例需要网络连接以调用 API
-3. **编译要求**: 运行前必须先执行 `pnpm run build`
-4. **Node 版本**: 需要 Node.js 18+（支持 `fetch` API）
+1. **Account Security**: `config.json` is ignored by `.gitignore` and will not be committed to Git
+2. **Network Connection**: Running examples requires network connection to call the API
+3. **Build Requirement**: You must run `pnpm run build` before running examples
+4. **Node Version**: Requires Node.js 18+ (supports `fetch` API)
 
-## 常见问题
+## FAQ
 
-### Q: 提示 "config.json 不存在"
-A: 请复制 `config.example.json` 为 `config.json` 并填写邮箱和密码
+### Q: It says "config.json does not exist"
+A: Please copy `config.example.json` to `config.json` and fill in your email and password
 
-### Q: 音频生成失败
-A: 检查网络连接，确认邮箱和密码正确
+### Q: Audio generation failed
+A: Check network connection and verify that email and password are correct
 
-### Q: 如何修改音频质量？
-A: 编辑 `config.json` 中的 `kbitrate` 字段
+### Q: How to change audio quality?
+A: Edit the `kbitrate` field in `config.json`

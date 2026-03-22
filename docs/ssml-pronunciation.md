@@ -1,19 +1,19 @@
-# 语音合成标记语言 (SSML) 的发音 - 语音服务 - Foundry Tools | Microsoft Learn
+# Pronunciation in Speech Synthesis Markup Language (SSML) - Speech Service - Foundry Tools | Microsoft Learn
 
-可以将语音合成标记语言 (SSML) 与 text to speech 一起使用，以指定语音的发音方式。 例如，可以将 SSML 与音素和自定义词典配合使用来改进发音。
+Speech Synthesis Markup Language (SSML) can be used with text-to-speech to specify how speech should be pronounced. For example, SSML can be used with phonemes and custom dictionaries to improve pronunciation.
 
-## 音素元素
+## Phoneme Element
 
-`phoneme` 元素用于 SSML 文档中的发音。 始终提供人类可读的语音作为备用方案。
+The `phoneme` element is used for pronunciation in SSML documents. Always provide human-readable speech as a fallback.
 
-| Attribute | 说明 | 必需还是可选 |
+| Attribute | Description | Required or Optional |
 | --- | --- | --- |
-| `alphabet` | 音标字母表。 支持：`ipa`, `sapi`, `ups`, `x-sampa`。 | 可选 |
-| `ph` | 包含用于指定单词发音的音素字符串。 | 必选 |
+| `alphabet` | Phonetic alphabet. Supported: `ipa`, `sapi`, `ups`, `x-sampa`. | Optional |
+| `ph` | Phoneme string containing the pronunciation of the word. | Required |
 
-### 音素示例
+### Phoneme Examples
 
-使用 IPA 字母表：
+Using the IPA alphabet:
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -23,7 +23,7 @@
 </speak>
 ```
 
-使用 SAPI 字母表：
+Using the SAPI alphabet:
 
 ```xml
 <speak version="1.0" xmlns="https://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -33,7 +33,7 @@
 </speak>
 ```
 
-使用 x-sampa 字母表：
+Using the x-sampa alphabet:
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -43,15 +43,15 @@
 </speak>
 ```
 
-## 自定义词典
+## Custom Dictionary
 
-使用 `lexicon` 元素引用自定义词典 XML 文件来定义多个实体的发音。
+Use the `lexicon` element to reference a custom dictionary XML file to define pronunciations for multiple entities.
 
-| Attribute | 说明 | 必需还是可选 |
+| Attribute | Description | Required or Optional |
 | --- | --- | --- |
-| `uri` | 自定义词典 XML 文件的 URI（`.xml` 或 `.pls`）。 | 必选 |
+| `uri` | URI of the custom dictionary XML file (`.xml` or `.pls`). | Required |
 
-### 自定义词典示例
+### Custom Dictionary Example
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"
@@ -64,7 +64,7 @@
 </speak>
 ```
 
-### 自定义词典文件格式
+### Custom Dictionary File Format
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -87,22 +87,22 @@
 </lexicon>
 ```
 
-**限制**:
-- 文件大小最大 100 KB
-- 词典缓存 15 分钟刷新
-- 一个词典仅限一种区域设置
+**Limitations**:
+- Maximum file size: 100 KB
+- Dictionary cache refreshes every 15 minutes
+- One locale per dictionary
 
-## Say-as 元素
+## Say-as Element
 
-指示元素文本的内容类型（如数字、日期等）。
+Indicates the content type of the element text (such as numbers, dates, etc.).
 
-| Attribute | 说明 | 必需还是可选 |
+| Attribute | Description | Required or Optional |
 | --- | --- | --- |
-| `interpret-as` | 内容类型。 支持：`characters`, `cardinal`, `ordinal`, `date`, `time`, `currency`, `telephone` 等。 | 必选 |
-| `format` | 精确格式（如 `mdy`, `hms12` 等）。 | 可选 |
-| `detail` | 朗读细节层次。 | 可选 |
+| `interpret-as` | Content type. Supported: `characters`, `cardinal`, `ordinal`, `date`, `time`, `currency`, `telephone`, etc. | Required |
+| `format` | Exact format (such as `mdy`, `hms12`, etc.). | Optional |
+| `detail` | Level of detail for reading. | Optional |
 
-### Say-as 示例
+### Say-as Examples
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -116,28 +116,28 @@
 </speak>
 ```
 
-### 支持的 interpret-as 值
+### Supported interpret-as Values
 
-| interpret-as | 说明 |
+| interpret-as | Description |
 | --- | --- |
-| `characters`, `spell-out` | 逐字母拼写 |
-| `alphanumeric` | 字母数字混合拼写 |
-| `cardinal`, `number` | 基数 |
-| `ordinal` | 序数 |
-| `number_digit` | 单个数字序列 |
-| `fraction` | 分数 |
-| `date` | 日期 |
-| `time` | 时间 |
-| `duration` | 持续时间 |
-| `telephone` | 电话号码 |
-| `currency` | 货币 |
-| `unit` | 单位 |
-| `address` | 地址 |
-| `name` | 人名 |
+| `characters`, `spell-out` | Spell out letter by letter |
+| `alphanumeric` | Alphanumeric mixed spelling |
+| `cardinal`, `number` | Cardinal numbers |
+| `ordinal` | Ordinal numbers |
+| `number_digit` | Sequence of individual digits |
+| `fraction` | Fractions |
+| `date` | Dates |
+| `time` | Time |
+| `duration` | Duration |
+| `telephone` | Phone numbers |
+| `currency` | Currency |
+| `unit` | Units of measurement |
+| `address` | Addresses |
+| `name` | Personal names |
 
-## Sub 元素
+## Sub Element
 
-使用 `sub` 元素指定别名文本代替原元素文本。
+Use the `sub` element to specify alias text to replace the original element text.
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -147,9 +147,9 @@
 </speak>
 ```
 
-## 数学表达式的阅读
+## Reading Mathematical Expressions
 
-### 方法 1：纯文本数学表达式
+### Method 1: Plain Text Mathematical Expressions
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
@@ -160,7 +160,7 @@
 </speak>
 ```
 
-读出括号：
+Read out parentheses:
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
@@ -171,7 +171,7 @@
 </speak>
 ```
 
-### 方法 2：使用 MathML
+### Method 2: Using MathML
 
 ```xml
 <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='en-US'>
@@ -196,4 +196,10 @@
 </speak>
 ```
 
-输出："a squared 加 b squared 等于 c squared"
+Output: "a squared plus b squared equals c squared"
+
+---
+
+**Note**: This documentation is based on Microsoft's official SSML documentation. For the most up-to-date information, please refer to the [Microsoft Azure Speech Service documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-synthesis-markup-pronunciation).
+
+© Microsoft Corporation. All rights reserved.

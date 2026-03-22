@@ -1,61 +1,61 @@
 #!/bin/bash
-# 示例运行脚本
-# 解决 ts-node 无法正确处理中文文件名的问题
+# Example run script
+# Solve ts-node's inability to properly handle Chinese filenames
 
-# 检查配置文件
+# Check configuration file
 if [ ! -f "config.json" ]; then
-    echo "❌ 错误：config.json 不存在"
-    echo "📝 请复制 config.example.json 为 config.json 并填写邮箱和密码"
+    echo "❌ Error: config.json does not exist"
+    echo "📝 Please copy config.example.json to config.json and fill in email and password"
     exit 1
 fi
 
-# 编译项目
-echo "🔨 正在编译项目..."
+# Build project
+echo "🔨 Building project..."
 pnpm run build
 
-# 复制 config.json 到 dist/example
-echo "📋 复制配置文件到输出目录..."
+# Copy config.json to dist/example
+echo "📋 Copying configuration file to output directory..."
 cp config.json ../dist/example/
 
-# 切换到 dist/example 目录运行示例
+# Switch to dist/example directory to run examples
 cd ../dist/example
 
-    # 运行示例
+    # Run example
     case "$1" in
         0)
-            echo "🎙️  运行示例 0: 简单对话演示"
+            echo "🎙️  Running Example 0: Simple Dialogue Demo"
             node "00-简单对话演示.js"
             ;;
         1)
-            echo "🎙️  运行示例 1: 多说话人对话 - 链式调用"
+            echo "🎙️  Running Example 1: Multi-Speaker Dialogue - Chained"
             node "01-多说话人对话 - 链式调用.js"
             ;;
     2)
-        echo "🎙️  运行示例 2: 多说话人对话 - 函数式"
+        echo "🎙️  Running Example 2: Multi-Speaker Dialogue - Functional"
         node "02-多说话人对话 - 函数式.js"
         ;;
     3)
-        echo "🎙️  运行示例 3: 31 种情感风格演示"
+        echo "🎙️  Running Example 3: 31 Emotional Styles Demo"
         node "03-31 种情感风格演示.js"
         ;;
     4)
-        echo "🎙️  运行示例 4: 情感强度控制演示"
+        echo "🎙️  Running Example 4: Style Degree Control Demo"
         node "04-情感强度控制演示.js"
         ;;
     5)
-        echo "🎙️  运行示例 5: 文本替换功能演示"
+        echo "🎙️  Running Example 5: Text Substitution Demo"
         node "05-文本替换功能演示.js"
         ;;
     *)
-        echo "用法：./run.sh <示例编号>"
+        echo "Usage: ./run.sh <example-number>"
         echo ""
-        echo "可用示例:"
-        echo "  0 - 简单对话演示"
-        echo "  1 - 多说话人对话 - 链式调用"
-        echo "  2 - 多说话人对话 - 函数式"
-        echo "  3 - 31 种情感风格演示"
-        echo "  4 - 情感强度控制演示"
-        echo "  5 - 文本替换功能演示"
+        echo "Available examples:"
+        echo "  0 - Simple Dialogue Demo"
+        echo "  1 - Multi-Speaker Dialogue - Chained"
+        echo "  2 - Multi-Speaker Dialogue - Functional"
+        echo "  3 - 31 Emotional Styles Demo"
+        echo "  4 - Style Degree Control Demo"
+        echo "  5 - Text Substitution Demo"
         exit 1
         ;;
 esac

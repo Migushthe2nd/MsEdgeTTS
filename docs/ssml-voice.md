@@ -1,25 +1,25 @@
-# 语音合成标记语言 (SSML) 的语音和声音 - 语音服务 - Foundry Tools | Microsoft Learn
+# Voice and Sounds in Speech Synthesis Markup Language (SSML) - Speech Service - Foundry Tools | Microsoft Learn
 
-可以使用语音合成标记语言 (SSML) 为语音输出指定文本转语音的声音、语言、名称、风格和角色。 还可以在单个 SSML 文档中使用多种语音，并调整重音、语速、音调和音量。 此外，SSML 还能够插入预先录制的音频，例如音效或音符。
+You can use Speech Synthesis Markup Language (SSML) to specify the voice, language, name, style, and role for text-to-speech output. You can also use multiple voices in a single SSML document and adjust stress, speech rate, pitch, and volume. Additionally, SSML allows insertion of pre-recorded audio, such as sound effects or musical notes.
 
-本文介绍了如何使用 SSML 元素来指定语音和声音。 有关 SSML 语法的详细信息，请参阅 [SSML 文档结构和事件](speech-synthesis-markup-structure)。
+This article describes how to use SSML elements to specify voice and sounds. For more information about SSML syntax, see [SSML document structure and events](speech-synthesis-markup-structure).
 
-## 使用语音元素
+## Using the voice element
 
-必须在每个 SSML `voice` 元素中至少指定一个  元素。 此元素可确定用于文本转语音的声音。
+You must specify at least one `name` attribute in each SSML `voice` element. This attribute determines the voice used for text-to-speech.
 
-可以在单个 SSML 文档中包含多个 `voice` 元素。 每个 `voice` 元素可以指定不同的语音。 还可以通过不同的设置多次使用同一语音，例如，当 [更改句子之间的静音持续时间](speech-synthesis-markup-structure#add-silence) 时。
+You can include multiple `voice` elements in a single SSML document. Each `voice` element can specify a different voice. You can also use the same voice multiple times with different settings, for example, when [changing the duration of silence between sentences](speech-synthesis-markup-structure#add-silence).
 
-下表介绍 `voice` 元素的属性的用法：
+The following table describes the usage of `voice` element attributes:
 
-| Attribute | 说明 | 必需还是可选 |
+| Attribute | Description | Required or Optional |
 | --- | --- | --- |
-| `name` | 用于文本转语音输出的声音。 有关支持的标准语音的完整列表，请参阅 [语言支持](language-support?tabs=tts)。 | 必选 |
-| `effect` | 音频效果处理器，用于在设备上针对特定方案优化合成语音输出的质量。 对于生产环境中的某些方案，听觉体验可能会因某些设备上的播放失真而降级。 例如，由于扬声器响应、房间混响和背景噪音等环境因素，来自汽车扬声器的合成语音可能会听起来迟钝而低沉。 乘客可能必须调高音量才能听得更清楚。 为了避免在这种情况下进行手动操作，音频效果处理器可以通过补偿播放失真来让声音更清晰。支持以下值：<br>- `eq_car` - 在汽车、公共汽车和其他封闭车辆中提供高保真语音时，优化听觉体验。<br>- `eq_telecomhp8k` - 优化电信或电话方案中窄带语音的听觉体验。 应使用 8 kHz 的采样率。 如果采样率不是 8 kHz，则不会优化输出语音的听觉质量。<br><br>如果值缺失或无效，则会忽略此属性，而不会应用任何效果。 | 可选 |
+| `name` | The voice used for text-to-speech output. For a complete list of supported standard voices, see [Language support](language-support?tabs=tts). | Required |
+| `effect` | Audio effect processor used to optimize the quality of synthesized speech output on devices for specific scenarios. In certain production scenarios, the listening experience may be degraded due to playback distortion on certain devices. For example, synthesized speech from car speakers may sound dull and muffled due to environmental factors such as speaker response, room reverberation, and background noise. Passengers may have to turn up the volume to hear more clearly. To avoid manual operation in this situation, the audio effect processor can make the voice clearer by compensating for playback distortion. The following values are supported:<br>- `eq_car` - Optimizes the listening experience when delivering high-fidelity speech in cars, buses, and other enclosed vehicles.<br>- `eq_telecomhp8k` - Optimizes the listening experience for narrowband speech in telecommunications or telephony scenarios. A sample rate of 8 kHz should be used. If the sample rate is not 8 kHz, the listening quality of the output speech will not be optimized.<br><br>If the value is missing or invalid, this attribute is ignored and no effect is applied. | Optional |
 
-### 语音示例
+### Voice examples
 
-#### 单一声音示例
+#### Single voice example
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -29,7 +29,7 @@
 </speak>
 ```
 
-#### 多个语音的示例
+#### Multiple voices example
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -42,7 +42,7 @@
 </speak>
 ```
 
-#### 音频效果示例
+#### Audio effect example
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -52,7 +52,7 @@
 </speak>
 ```
 
-#### 多讲话人语音示例
+#### Multi-speaker voice example
 
 ```xml
 <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='en-US'>
@@ -65,99 +65,99 @@
 </speak>
 ```
 
-## 使用说话风格和角色
+## Using speaking styles and roles
 
-默认情况下，神经网络声音采用中性讲话风格。 可在句子层面调整讲话风格、风格强度和角色。
+By default, neural voices use a neutral speaking style. You can adjust the speaking style, style intensity, and role at the sentence level.
 
-下表介绍 `mstts:express-as` 元素的属性的用法：
+The following table describes the usage of `mstts:express-as` element attributes:
 
-| Attribute | 说明 | 必需还是可选 |
+| Attribute | Description | Required or Optional |
 | --- | --- | --- |
-| `style` | 特定声音的说话风格。 可以表达快乐、同情和平静等情绪。 | 必选 |
-| `styledegree` | 讲话风格的强度。 可接受值的范围为：`0.01` 到 `2`（含）。 默认值为 `1`。 | 可选 |
-| `role` | 说话时的角色扮演。 声音可以模仿不同的年龄和性别。 | 可选 |
+| `style` | The speaking style for a specific voice. Can express emotions such as happiness, sympathy, and calmness. | Required |
+| `styledegree` | The intensity of the speaking style. Acceptable values range from `0.01` to `2` (inclusive). Default value is `1`. | Optional |
+| `role` | Role-playing when speaking. Voices can imitate different ages and genders. | Optional |
 
-### 支持的风格 (Style)
+### Supported styles
 
-| Style | 说明 |
+| Style | Description |
 | --- | --- |
-| `advertisement_upbeat` | 用兴奋和精力充沛的语气推广产品或服务。 |
-| `affectionate` | 以较高的音调和音量表达温暖而亲切的语气。 |
-| `angry` | 表达生气和厌恶的语气。 |
-| `assistant` | 以温暖且轻松的语气说话，用于数字助手。 |
-| `calm` | 以沉着冷静的态度说话。 |
-| `chat` | 表达轻松随意的语气。 |
-| `cheerful` | 表达积极愉快的语气。 |
-| `customerservice` | 以友好热情的语气为客户提供支持。 |
-| `depressed` | 调低音调和音量来表达忧郁、沮丧的语气。 |
-| `documentary-narration` | 用轻松、感兴趣和信息丰富的风格讲述纪录片。 |
-| `empathetic` | 表达关心和理解。 |
-| `excited` | 表达乐观和充满希望的语气。 |
-| `fearful` | 以较高的音调、较高的音量和较快的语速来表达恐惧。 |
-| `friendly` | 表达一种愉快、怡人且温暖的语气。 |
-| `gentle` | 以较低的音调和音量表达温和、礼貌和愉快的语气。 |
-| `hopeful` | 以温暖和向往的语气说话。 |
-| `lyrical` | 以优美又带感伤的方式表达情感。 |
-| `narration-professional` | 以专业、客观的语气朗读内容。 |
-| `narration-relaxed` | 以舒缓且悦耳的语气说话，用于内容朗读。 |
-| `newscast` | 以正式专业的语气叙述新闻。 |
-| `newscast-casual` | 以通用、随意的语气发布一般新闻。 |
-| `newscast-formal` | 以正式、自信和权威的语气发布新闻。 |
-| `poetry-reading` | 在读诗时表达出带情感和节奏的语气。 |
-| `sad` | 表达悲伤语气。 |
-| `serious` | 表达严肃和命令的语气。 |
-| `shouting` | 以一种听起来好像语音在远处或在另一个位置说话。 |
-| `sports_commentary` | 表达一种既轻松又感兴趣的语气，用于播报体育赛事。 |
-| `sports_commentary_excited` | 用快速且充满活力的语气播报体育赛事精彩瞬间。 |
-| `whispering` | 以试图发出轻柔、温和声音的柔和语气说话。 |
-| `terrified` | 表达一种害怕的语气，语速快且声音颤抖。 |
-| `unfriendly` | 表达一种冷淡无情的语气。 |
+| `advertisement_upbeat` | Promote products or services with an excited and energetic tone. |
+| `affectionate` | Express warm and affectionate tone with higher pitch and volume. |
+| `angry` | Express angry and disgusted tone. |
+| `assistant` | Speak in a warm and relaxed tone, used for digital assistants. |
+| `calm` | Speak with composure and calmness. |
+| `chat` | Express a relaxed and casual tone. |
+| `cheerful` | Express a positive and pleasant tone. |
+| `customerservice` | Provide support to customers with a friendly and enthusiastic tone. |
+| `depressed` | Express melancholy and depressed tone with lower pitch and volume. |
+| `documentary-narration` | Narrate documentaries in a relaxed, interested, and informative style. |
+| `empathetic` | Express care and understanding. |
+| `excited` | Express an optimistic and hopeful tone. |
+| `fearful` | Express fear with higher pitch, higher volume, and faster speech rate. |
+| `friendly` | Express a pleasant, charming, and warm tone. |
+| `gentle` | Express a mild, polite, and pleasant tone with lower pitch and volume. |
+| `hopeful` | Speak in a warm and longing tone. |
+| `lyrical` | Express emotions in a graceful and slightly sentimental way. |
+| `narration-professional` | Read content in a professional and objective tone. |
+| `narration-relaxed` | Speak in a soothing and pleasant tone, used for content narration. |
+| `newscast` | Narrate news in a formal and professional tone. |
+| `newscast-casual` | Deliver general news in a common, casual tone. |
+| `newscast-formal` | Deliver news in a formal, confident, and authoritative tone. |
+| `poetry-reading` | Express emotional and rhythmic tone when reading poetry. |
+| `sad` | Express a sorrowful tone. |
+| `serious` | Express a serious and commanding tone. |
+| `shouting` | Sound as if speaking from a distance or in another location. |
+| `sports_commentary` | Express a relaxed yet interested tone for broadcasting sports events. |
+| `sports_commentary_excited` | Broadcast sports event highlights with a fast and energetic tone. |
+| `terrified` | Express a fearful tone with fast speech rate and trembling voice. |
+| `unfriendly` | Express a cold and indifferent tone. |
+| `whispering` | Speak in a soft tone trying to produce a gentle and mild sound. |
 
-### 支持的角色 (Role)
+### Supported roles
 
-| 角色 | 说明 |
+| Role | Description |
 | --- | --- |
-| `Girl` | 声音模仿女孩。 |
-| `Boy` | 声音模仿男孩。 |
-| `YoungAdultFemale` | 声音模仿年轻的成年女性。 |
-| `YoungAdultMale` | 声音模仿年轻的成年男性。 |
-| `OlderAdultFemale` | 声音模仿年长的成年女性。 |
-| `OlderAdultMale` | 声音模仿年长的成年男性。 |
-| `SeniorFemale` | 声音模仿年老女性。 |
-| `SeniorMale` | 声音模仿年老男性。 |
+| `Girl` | Voice imitates a girl. |
+| `Boy` | Voice imitates a boy. |
+| `YoungAdultFemale` | Voice imitates a young adult female. |
+| `YoungAdultMale` | Voice imitates a young adult male. |
+| `OlderAdultFemale` | Voice imitates an older adult female. |
+| `OlderAdultMale` | Voice imitates an older adult male. |
+| `SeniorFemale` | Voice imitates an elderly female. |
+| `SeniorMale` | Voice imitates an elderly male. |
 
-### 风格和程度示例
+### Style and style degree examples
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="zh-CN">
     <voice name="zh-CN-XiaomoNeural">
         <mstts:express-as style="sad" styledegree="2">
-            快走吧，路上一定要注意安全，早去早回。
+            Hurry up, be careful on the road, and come back early.
         </mstts:express-as>
     </voice>
 </speak>
 ```
 
-### 角色示例
+### Role examples
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="zh-CN">
     <voice name="zh-CN-XiaomoNeural">
-        女儿看见父亲走了进来，问道：
+        The daughter saw her father walk in and asked:
         <mstts:express-as role="YoungAdultFemale" style="calm">
-            "您来的挺快的，怎么过来的？"
+            "You came pretty fast, how did you get here?"
         </mstts:express-as>
-        父亲放下手提包，说：
+        The father put down his bag and said:
         <mstts:express-as role="OlderAdultMale" style="calm">
-            "刚打车过来的，路上还挺顺畅。"
+            "I just took a taxi, the traffic was smooth."
         </mstts:express-as>
     </voice>
 </speak>
 ```
 
-## 调整讲话语言
+## Adjusting speaking language
 
-使用 `<lang xml:lang>` 元素调整多语言语音的说话语言。
+Use the `<lang xml:lang>` element to adjust the speaking language for multilingual voices.
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
@@ -169,19 +169,19 @@
 </speak>
 ```
 
-## 调整韵律
+## Adjusting prosody
 
-使用 `prosody` 元素指定音高、语调、范围、速率和音量的变化。
+Use the `prosody` element to specify variations in pitch, intonation, range, speech rate, and volume.
 
-| Attribute | 说明 |
+| Attribute | Description |
 | --- | --- |
-| `contour` | 升降曲线表示音高的变化。 |
-| `pitch` | 基线音节。 可用值：`x-low`, `low`, `medium`, `high`, `x-high`, 或相对值（如 `+20Hz`, `-2st`）。 |
-| `range` | 音节范围。 |
-| `rate` | 语速。 可用值：`x-slow`, `slow`, `medium`, `fast`, `x-fast`, 或相对值（如 `+30%`）。 |
-| `volume` | 音量。 可用值：`silent`, `x-soft`, `soft`, `medium`, `loud`, `x-loud`, 或相对值（如 `+20`）。 |
+| `contour` | Contour curve representing pitch variations. |
+| `pitch` | Baseline pitch. Available values: `x-low`, `low`, `medium`, `high`, `x-high`, or relative values (e.g., `+20Hz`, `-2st`). |
+| `range` | Pitch range. |
+| `rate` | Speech rate. Available values: `x-slow`, `slow`, `medium`, `fast`, `x-fast`, or relative values (e.g., `+30%`). |
+| `volume` | Volume level. Available values: `silent`, `x-soft`, `soft`, `medium`, `loud`, `x-loud`, or relative values (e.g., `+20`). |
 
-### 韵律示例
+### Prosody example
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -193,7 +193,7 @@
 </speak>
 ```
 
-## 添加录制的音频
+## Adding recorded audio
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -204,7 +204,7 @@
 </speak>
 ```
 
-## 添加背景音频
+## Adding background audio
 
 ```xml
 <speak version="1.0" xml:lang="en-US" xmlns:mstts="http://www.w3.org/2001/mstts">
@@ -215,7 +215,7 @@
 </speak>
 ```
 
-## 语音转换元素
+## Voice conversion element
 
 ```xml
 <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
@@ -224,3 +224,15 @@
     </voice>
 </speak>
 ```
+
+---
+
+## Related Links
+
+- [Microsoft Azure Speech Service Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/)
+- [SSML Specification](https://www.w3.org/TR/speech-synthesis11/)
+- [Language Support for Text-to-Speech](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support?tabs=tts)
+
+---
+
+*This documentation is translated from Microsoft official documentation. All rights reserved to Microsoft.*
