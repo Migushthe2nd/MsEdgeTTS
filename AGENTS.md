@@ -1,14 +1,16 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-18
+**Generated:** 2026-03-22
 **Commit:** main branch
 **Branch:** main
 
 ## OVERVIEW
 
-Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft Edge Read Aloud API) 的 Node.js/TypeScript 模块。支持语音合成、SSML、多种音频格式输出。
+Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft Edge Read Aloud API) 的 Node.js/TypeScript 模块。支持语音合成、SSML、多说话人对话、情感风格控制、多种音频格式输出。
 
 **核心栈**: TypeScript, WebSocket, Jest (测试), pnpm (包管理器)
+**代码规模**: ~1010 行 TypeScript (src/ 目录)
+**更新时间**: 2026-03-22
 
 ## STRUCTURE
 
@@ -16,7 +18,7 @@ Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft E
 ./
 ├── src/                          # 全部源代码（9 个 TypeScript 文件）
 │   ├── index.ts                  # 主入口点（barrel exports，6 个导出）
-│   ├── MsEdgeTTS.ts              # 核心 TTS 类（457 行，WebSocket 通信）
+│   ├── MsEdgeTTS.ts              # 核心 TTS 类（~499 行，WebSocket 通信）
 │   ├── MsEdgeTTS.spec.ts         # 单元测试
 │   ├── Output.ts                 # 音频输出格式枚举 + 扩展名映射
 │   ├── Prosody.ts                # 语速/音调/音量选项类
@@ -64,6 +66,11 @@ Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft E
 | `VOLUME` | Enum | `src/Prosody.ts` | 音量预设（silent 到 x-LOUD） |
 | `Voice` | Type | `src/MsEdgeTTS.ts` | 语音元数据结构 |
 | `MetadataOptions` | Class | `src/MsEdgeTTS.ts` | 边界元数据选项（句子/单词） |
+| `DialogueBuilder` | Class | `src/DialogueBuilder.ts` | 链式对话构建器 |
+| `buildDialogueSSML` | Function | `src/DialogueBuilder.ts` | 函数式 SSML 生成 |
+| `escapeSSML` | Function | `src/SSMLUtils.ts` | XML 转义（& < > " '） |
+| `validateStyle` | Function | `src/SSMLUtils.ts` | 验证 28 种官方情感风格 |
+| `validateStyleDegree` | Function | `src/SSMLUtils.ts` | 验证 styleDegree 范围（0.01-2.0） |
 | `joinPath` | Function | `src/utils.ts` | 路径拼接工具 |
 
 ## CONVENTIONS
@@ -83,13 +90,39 @@ Microsoft Edge TTS 文本转语音库 - 使用 Azure Speech Service (Microsoft E
 - 强制使用 `pnpm`（preinstall 钩子）
 - 版本锁定：pnpm-lock.yaml
 
+**错误处理约定**:
+- 验证失败时抛出明确 Error（见 SSMLUtils.ts）
+- 无效输入立即抛出，不调用 fallback
+
+**日志约定**:
+- 可选 logger 通过 `enableLogger` 选项启用
+- 使用私有 `_log()` 方法记录
+- 仅记录连接状态、消息收发
+
+**SSML 处理约定**:
+- 转义顺序先 & 后其他，防止重复转义
+- 仅支持 `speak`, `voice`, `prosody` 元素
+
 ## ANTI-PATTERNS (THIS PROJECT)
 
 - ❌ **不要** 使用 npm/yarn - 项目强制使用 pnpm
 - ❌ **不要** 将测试移至独立目录 - 保持 `*.spec.ts` 与源码同级
 - ❌ **不要** 修改 tsconfig 的 module/moduleResolution - 依赖 CommonJS
-- ❌ **不要** 在浏览器中使用 - API 需要 Edge User-Agent（仅限服务器端）
+- ❌ **不要** 修改 Sec-MS-GEC 哈希算法 - 依赖 Azure 认证机制
+- ❌ **不要** 删除 `isomorphic-ws` 依赖 - 实现跨环境兼容
+- ❌ **不要** 使用回调 API - 仅支持 Promise
+- ❌ **不要** 在浏览器中使用 - API 需要 Edge User-Agent（仅服务器端）
 - ❌ **不要** 删除 `dist/` 外的文件 - 发布仅包含 dist 目录
+
+## ERROR HANDLING
+
+**抛出 Error 的场景**:
+- 未配置 metadata：`"Speech synthesis not configured yet..."`
+- 无效 voiceLocale：`"Could not infer voiceLocale from voiceName..."`
+- 无效 style：`'Invalid style "xxx". Valid styles: ...'`
+- styleDegree 越界：`"styleDegree must be between 0.01 and 2.0"`
+- 空 voice 名称：`"voice name is required and cannot be empty"`
+- 空文本：`"text cannot be empty string"`
 
 ## UNIQUE STYLES
 
@@ -141,7 +174,9 @@ pnpm run publish
 
 **已知问题**:
 - package.json 中的 `src/test/test.ts` 和 `src/test/jest-e2e.json` 不存在（遗留配置）
-- CI 仅部署文档，不运行测试
+- 测试覆盖率不足：仅 1 个测试文件（MsEdgeTTS.spec.ts），覆盖率 11%
+- utils.ts 过于简化（仅 6 行代码），可考虑合并
+- example/ 目录混合非 TS 文件（config.json, run.sh 等）
 
 **发布流程**:
 1. `pnpm run build` 编译到 dist/
