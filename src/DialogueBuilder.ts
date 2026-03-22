@@ -2,24 +2,24 @@ import { Dialogue, type DialogueTurn } from "./DialogueTurn";
 import { escapeSSML, replaceText, validateStyle, validateStyleDegree } from "./SSMLUtils";
 
 /**
- * 对话构建器类，用于链式构建多说话人对话
+ * Dialogue builder class for chain-building multi-speaker dialogues
  */
 export class DialogueBuilder {
     private turns: DialogueTurn[] = [];
 
     /**
-     * 创建对话构建器
+     * Create a dialogue builder
      */
     constructor() {}
 
     /**
-     * 添加一个对话回合（链式调用）
-     * @param turn 对话回合对象
-     * @returns 当前构建器实例（支持链式调用）
-     * @throws 当 turn 参数无效时抛出异常
+     * Add a dialogue turn (chained call)
+     * @param turn - Dialogue turn object
+     * @returns Current builder instance (supports chained calls)
+     * @throws Throws an error when turn parameter is invalid
      */
     addTurn(turn: DialogueTurn): DialogueBuilder {
-        // 严格模式验证
+        // Strict mode validation
         if (!turn.voice || turn.voice.trim() === "") {
             throw new Error("voice name is required and cannot be empty");
         }
@@ -41,8 +41,8 @@ export class DialogueBuilder {
     }
 
     /**
-     * 构建 Dialogue 对象
-     * @returns 包含所有添加回合的 Dialogue 对象
+     * Build a Dialogue object
+     * @returns Dialogue object containing all added turns
      */
     build(): Dialogue {
         const dialogue = new Dialogue();
@@ -51,8 +51,8 @@ export class DialogueBuilder {
     }
 
     /**
-     * 重置构建器状态，清空所有已添加的回合
-     * @returns 当前构建器实例（支持链式调用）
+     * Reset builder state, clearing all added turns
+     * @returns Current builder instance (supports chained calls)
      */
     reset(): DialogueBuilder {
         this.turns = [];
@@ -61,53 +61,53 @@ export class DialogueBuilder {
 }
 
 /**
- * 构建多说话人对话的 SSML 字符串
- * @param turns 对话回合数组
- * @returns 完整的 SSML 字符串
+ * Build SSML string for multi-speaker dialogue
+ * @param turns - Array of dialogue turns
+ * @returns Complete SSML string
  */
 export function buildDialogueSSML(turns: DialogueTurn[]): string {
     const voiceElements: string[] = [];
 
     for (const turn of turns) {
-        // 处理文本：先应用替换，后应用 SSML 转义
+        // Process text: apply substitutions first, then SSML escaping
         let processedText = turn.text || "";
         
-        // 应用文本替换（生成 <sub alias> 标签）
+        // Apply text substitution (generate <sub alias> tags)
         if (turn.substitutions && turn.substitutions.length > 0) {
-            // 按文本长度降序处理，确保先替换长词
+            // Sort by text length descending to ensure longer words are replaced first
             const sortedSubs = [...turn.substitutions].sort((a, b) => b.text.length - a.text.length);
             const placeholders: Map<string, string> = new Map();
             
             for (let i = 0; i < sortedSubs.length; i++) {
                 const sub = sortedSubs[i];
-                // 先对 alias 和 text 进行 SSML 转义
+                // First escape alias and text for SSML
                 const escapedAlias = escapeSSML(sub.alias);
                 const escapedText = escapeSSML(sub.text);
-                // 生成 <sub alias="...">text</sub> 标签
+                // Generate <sub alias="...">text</sub> tag
                 const subTag = `<sub alias="${escapedAlias}">${escapedText}</sub>`;
-                // 使用唯一占位符
+                // Use unique placeholder
                 const placeholder = `__SUB_PLACEHOLDER_${i}__`;
                 placeholders.set(placeholder, subTag);
-                // 先替换为占位符
+                // First replace with placeholder
                 processedText = processedText.replace(
                     new RegExp(sub.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "g"), 
                     placeholder
                 );
             }
             
-            // 应用 SSML 转义
+            // Apply SSML escaping
             processedText = escapeSSML(processedText);
             
-            // 恢复 <sub> 标签
+            // Restore <sub> tags
             for (const [placeholder, subTag] of placeholders.entries()) {
                 processedText = processedText.replace(placeholder, subTag);
             }
         } else {
-            // 没有替换时，直接应用 SSML 转义
+            // When no substitutions, apply SSML escaping directly
             processedText = escapeSSML(processedText);
         }
 
-        // 处理 children（如果有）
+        // Process children (if any)
         let childrenContent = "";
         if (turn.children && turn.children.length > 0) {
             childrenContent = turn.children
@@ -124,15 +124,15 @@ export function buildDialogueSSML(turns: DialogueTurn[]): string {
                 .join("");
         }
 
-        // 构建 voice 元素内容
+        // Build voice element content
         let voiceContent = childrenContent || processedText;
 
-        // 应用 lang（如果有）
+        // Apply lang (if any)
         if (turn.lang) {
             voiceContent = `<lang xml:lang="${turn.lang}">${voiceContent}</lang>`;
         }
 
-        // 应用 style 和 styleDegree（如果有）
+        // Apply style and styleDegree (if any)
         if (turn.style) {
             const styleDegreeAttr = turn.styleDegree !== undefined && turn.styleDegree !== null 
                 ? ` styledegree="${turn.styleDegree}"` 
@@ -140,15 +140,15 @@ export function buildDialogueSSML(turns: DialogueTurn[]): string {
             voiceContent = `<mstts:express-as style="${turn.style}"${styleDegreeAttr}>${voiceContent}</mstts:express-as>`;
         }
 
-        // 构建完整的 voice 元素
+        // Build complete voice element
         voiceElements.push(`<voice name="${turn.voice}">${voiceContent}</voice>`);
     }
 
-    // 推断主要语言（根据第一个 voice 名称）
+    // Infer primary language (based on first voice name)
     const firstVoice = turns[0]?.voice || "zh-CN-XiaoxiaoNeural";
-    const lang = firstVoice.split("-").slice(0, 2).join("-"); // 提取 "zh-CN" 或 "en-US"
+    const lang = firstVoice.split("-").slice(0, 2).join("-"); // Extract "zh-CN" or "en-US"
 
-    // 构建完整的 SSML
+    // Build complete SSML
     return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${lang}">
 ${voiceElements.join("\n")}
 </speak>`;

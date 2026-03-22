@@ -1,8 +1,8 @@
 import type { Substitution } from "./DialogueTurn";
 
 /**
- * 转义 SSML 特殊字符
- * 转义顺序：先 & 后其他，防止重复转义
+ * Escape SSML special characters
+ * Escape order: & first, then others to prevent double escaping
  */
 export function escapeSSML(text: string): string {
     return text
@@ -14,7 +14,7 @@ export function escapeSSML(text: string): string {
 }
 
 /**
- * 按顺序替换文本中的匹配项（单次遍历，非递归）
+ * Replace matches in text sequentially (single pass, non-recursive)
  */
 export function replaceText(text: string, substitutions: Substitution[]): string {
     let result = text;
@@ -25,7 +25,7 @@ export function replaceText(text: string, substitutions: Substitution[]): string
 }
 
 /**
- * Microsoft Azure Speech Service 官方支持的 28 种情感风格
+ * Officially supported 28 emotional styles by Microsoft Azure Speech Service
  */
 const VALID_STYLES = [
     "advertisement_upbeat",
@@ -62,8 +62,8 @@ const VALID_STYLES = [
 ] as const;
 
 /**
- * 验证 style 是否为有效的 Microsoft 官方情感风格
- * 无效时抛出 Error
+ * Validate if style is a valid Microsoft official emotional style
+ * Throws Error if invalid
  */
 export function validateStyle(style: string): void {
     if (!VALID_STYLES.includes(style as any)) {
@@ -72,8 +72,8 @@ export function validateStyle(style: string): void {
 }
 
 /**
- * 验证 styleDegree 范围（0.01-2.0）
- * 无效时抛出 Error
+ * Validate styleDegree range (0.01-2.0)
+ * Throws Error if invalid
  */
 export function validateStyleDegree(degree: number): void {
     if (degree < 0.01 || degree > 2.0) {
