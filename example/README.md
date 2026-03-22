@@ -30,78 +30,78 @@ pnpm run build
 ### 3. 运行示例
 
 ```bash
-# 示例 1: 多说话人对话 - 链式调用
-node example/01-多说话人对话 - 链式调用.ts
+# Example 1: Multi-Speaker Dialogue (Chained)
+node example/01-multi-speaker-dialogue-chained.ts
 
-# 示例 2: 多说话人对话 - 函数式
-node example/02-多说话人对话 - 函数式.ts
+# Example 2: Multi-Speaker Dialogue (Functional)
+node example/02-multi-speaker-dialogue-functional.ts
 
-# 示例 3: 31 种情感风格演示
-node example/03-31 种情感风格演示.ts
+# Example 3: 31 Emotional Styles Demo
+node example/03-31-emotional-styles-demo.ts
 
-# 示例 4: 情感强度控制演示
-node example/04-情感强度控制演示.ts
+# Example 4: Style Degree Control Demo
+node example/04-style-degree-control-demo.ts
 
-# 示例 5: 文本替换功能演示
-node example/05-文本替换功能演示.ts
+# Example 5: Text Substitution Demo
+node example/05-text-substitution-demo.ts
 ```
 
-## 示例说明
+## Example Descriptions
 
-### 示例 1: 多说话人对话 - 链式调用
+### Example 1: Multi-Speaker Dialogue (Chained)
 
-使用 `DialogueBuilder` 类以链式调用方式构建对话。
+Build dialogue using the `DialogueBuilder` class with chained calls.
 
-**特点**:
-- 链式调用语法
-- 中英混合播客场景
-- 4 个说话人轮次
+**Features**:
+- Chained call syntax
+- Chinese-English mixed podcast scenario
+- 4 speaker turns
 
-**输出**: `example/output/01-播客对话 - 链式调用.mp3`
+**Output**: `example/output/01-multi-speaker-dialogue-chained.mp3`
 
-### 示例 2: 多说话人对话 - 函数式
+### Example 2: Multi-Speaker Dialogue (Functional)
 
-使用 `buildDialogueSSML()` 函数直接构建对话。
+Build dialogue using the `buildDialogueSSML()` function.
 
-**特点**:
-- 函数式语法
-- 多语言客服对话
-- 4 个对话轮次
+**Features**:
+- Functional syntax
+- Multi-language customer service dialogue
+- 4 dialogue turns
 
-**输出**: `example/output/02-客服对话 - 函数式.mp3`
+**Output**: `example/output/02-multi-speaker-dialogue-functional.mp3`
 
-### 示例 3: 31 种情感风格演示
+### Example 3: 31 Emotional Styles Demo
 
-遍历所有 Microsoft Azure 支持的 31 种情感风格。
+Demonstrate all 31 emotional styles supported by Microsoft Azure.
 
-**特点**:
-- 完整的 31 种风格列表
-- 每种风格一句示例
-- 表格形式展示
+**Features**:
+- Complete list of 31 styles
+- One example sentence per style
+- Table format presentation
 
-**输出**: `example/output/03-31 种情感风格演示.mp3`
+**Output**: `example/output/03-31-emotional-styles-demo.mp3`
 
-### 示例 4: 情感强度控制演示
+### Example 4: Style Degree Control Demo
 
-演示 `styleDegree` 参数（0.01-2.0 范围）。
+Demonstrate the `styleDegree` parameter (range: 0.01-2.0).
 
-**特点**:
-- 0.5/1.0/2.0 三种强度对比
-- 使用 `sad` 情感
-- 同一语音不同强度
+**Features**:
+- Three intensity levels: 0.5/1.0/2.0
+- Uses `sad` emotional style
+- Same voice with different intensities
 
-**输出**: `example/output/04-情感强度控制演示.mp3`
+**Output**: `example/output/04-style-degree-control-demo.mp3`
 
-### 示例 5: 文本替换功能演示
+### Example 5: Text Substitution Demo
 
-演示 `substitutions` 参数替换专业术语。
+Demonstrate the `substitutions` parameter for replacing technical terms.
 
-**特点**:
+**Features**:
 - W3C → 万维网联盟
 - HTTP → 超文本传输协议
 - CEO → Chief Executive Officer
 
-**输出**: `example/output/05-文本替换功能演示.mp3`
+**Output**: `example/output/05-text-substitution-demo.mp3`
 
 ## API 参数说明
 
@@ -116,14 +116,14 @@ node example/05-文本替换功能演示.ts
 
 ## 输出目录
 
-所有生成的音频文件保存在：
+All generated audio files are saved in:
 ```
 example/output/
-├── 01-播客对话 - 链式调用.mp3
-├── 02-客服对话 - 函数式.mp3
-├── 03-31 种情感风格演示.mp3
-├── 04-情感强度控制演示.mp3
-└── 05-文本替换功能演示.mp3
+├── 01-multi-speaker-dialogue-chained.mp3
+├── 02-multi-speaker-dialogue-functional.mp3
+├── 03-31-emotional-styles-demo.mp3
+├── 04-style-degree-control-demo.mp3
+└── 05-text-substitution-demo.mp3
 ```
 
 ## 注意事项
