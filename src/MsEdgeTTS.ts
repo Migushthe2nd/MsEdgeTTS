@@ -7,6 +7,8 @@ import * as fs from "fs"
 import {Agent} from "http"
 import {ProsodyOptions} from "./Prosody"
 import {joinPath} from "./utils";
+import { Dialogue, DialogueTurn } from "./DialogueTurn";
+import { buildDialogueSSML } from "./DialogueBuilder";
 
 export type Voice = {
     Name: string;
@@ -316,6 +318,27 @@ export class MsEdgeTTS {
     }
 
     /**
+     * Writes raw audio synthesised from dialogue to a file. Supports multi-speaker conversations.
+     *
+     * @param dirPath a valid output directory path
+     * @param dialogue a {@link Dialogue} object or an array of {@link DialogueTurn} objects
+     * @param options (optional) {@link ProsodyOptions} - Note: prosody options are applied globally and may conflict with per-turn settings in dialogue
+     @returns {Promise<{audioFilePath: string, metadataFilePath: string | null}>} - a `Promise` with the full filepaths
+     */
+    toFileDialogue(dirPath: string, dialogue: Dialogue | DialogueTurn[], options?: ProsodyOptions): Promise<{
+        audioFilePath: string,
+        metadataFilePath: string | null
+    }> {
+        let ssml: string;
+        if (dialogue instanceof Dialogue) {
+            ssml = dialogue.toSSML();
+        } else {
+            ssml = buildDialogueSSML(dialogue);
+        }
+        return this.rawToFile(dirPath, ssml);
+    }
+
+    /**
      * Writes raw audio synthesised from text in real-time to a {@link Readable}. Uses a basic {@link _SSMLTemplate SML template}.
      *
      * @param input the text to synthesise. Can include SSML elements.
@@ -327,6 +350,25 @@ export class MsEdgeTTS {
         metadataStream: Readable | null,
     } {
         return this._rawSSMLRequest(this._SSMLTemplate(input, options))
+    }
+
+    /**
+     * Writes raw audio synthesised from dialogue in real-time to a {@link Readable}. Supports multi-speaker conversations.
+     *
+     * @param dialogue a {@link Dialogue} object or an array of {@link DialogueTurn} objects
+     @returns {Promise<{audioStream: Readable, metadataStream: Readable | null}>} - a `Promise` with the streams
+     */
+    toStreamDialogue(dialogue: Dialogue | DialogueTurn[]): {
+        audioStream: Readable,
+        metadataStream: Readable | null,
+    } {
+        let ssml: string;
+        if (dialogue instanceof Dialogue) {
+            ssml = dialogue.toSSML();
+        } else {
+            ssml = buildDialogueSSML(dialogue);
+        }
+        return this.rawToStream(ssml);
     }
 
     /**
