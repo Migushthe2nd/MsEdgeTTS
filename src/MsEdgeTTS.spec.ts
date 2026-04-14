@@ -5,6 +5,20 @@ import {mkdirSync, readFileSync, rmSync} from "fs"
 import {existsSync} from "node:fs"
 import {join} from "path"
 
+describe("MsEdgeTTS onerror", () => {
+    it("should reject with an Error instance containing diagnostic info when the socket errors", async () => {
+        const tts = new MsEdgeTTS()
+        // Force getSynthUrl to return a URL that will immediately fail
+        jest.spyOn(MsEdgeTTS as any, "getSynthUrl").mockResolvedValue("ws://localhost:1/invalid")
+        const rejection = tts["_initClient"]()
+        await expect(rejection).rejects.toBeInstanceOf(Error)
+        await expect(rejection).rejects.toMatchObject({
+            message: expect.stringContaining("Edge TTS WebSocket error:"),
+        })
+        jest.restoreAllMocks()
+    })
+})
+
 describe("MsEdgeTTS", () => {
     let tts: MsEdgeTTS
     let tmpPath: string
