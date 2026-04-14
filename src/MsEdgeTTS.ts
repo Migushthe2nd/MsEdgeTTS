@@ -168,8 +168,16 @@ export class MsEdgeTTS {
                     this._streams[requestId].audio.push(null)
                 }
             }
-            this._ws.onerror = function (error) {
-                reject("Connect Error: " + JSON.stringify(error, null, 2))
+            this._ws.onerror = (event: any) => {
+                // Node's `ws` library fires either a native Error or an ErrorEvent wrapping one.
+                const underlying = event?.error ?? event
+                const message = underlying?.message ?? String(underlying)
+                const code = underlying?.code ?? event?.code
+                const wrapped = new Error(
+                    `Edge TTS WebSocket error: ${message}${code ? ` (code=${code})` : ""}`
+                )
+                wrapped.cause = underlying
+                reject(wrapped)
             }
         })
     }
