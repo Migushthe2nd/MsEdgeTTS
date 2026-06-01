@@ -93,7 +93,7 @@ describe("MsEdgeTTS", () => {
         // mock _pushAudioData to do nothing, asif no data was received
         tts["_pushAudioData"] = jest.fn()
         await expect(() => tts.toFile(tmpPath, ""))
-            .rejects.toMatch("No audio")
+            .rejects.toThrow("No audio data received")
 
         expect(Object.keys(tts["_streams"]).length).toBe(0)
         expect(existsSync(join(tmpPath, "audio." + OUTPUT_EXTENSIONS[tts["_outputFormat"]]))).toBe(false)
