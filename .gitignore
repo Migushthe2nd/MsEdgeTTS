@@ -1,5 +1,5 @@
 # Build output
-dist
+dist/
 
 # General files
 node_modules
@@ -28,4 +28,7 @@ package-lock.json
 example_audio.webm
 example_audio_pitched.webm
 
+# Generated test files and AI-generated content
 msedgetts-test/
+.sisyphus/
+.github/

@@ -1,3 +1,6 @@
 export * from "./MsEdgeTTS"
 export * from "./Output"
 export * from "./Prosody"
+export * from "./DialogueTurn"
+export * from "./DialogueBuilder"
+export * from "./SSMLUtils"
