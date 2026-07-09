@@ -69,7 +69,7 @@ export class MsEdgeTTS {
     private _voice
     private _outputFormat
     private _metadataOptions: MetadataOptions = new MetadataOptions()
-    private _streams: { [key: string]: { audio: Readable, metadata: Readable } } = {}
+    private _streams: { [key: string]: { audio: Readable, metadata: Readable, turnEnded: boolean } } = {}
     private _startTime = 0
     private readonly _agent: Agent
 
@@ -140,6 +140,7 @@ export class MsEdgeTTS {
                 } else if (message.includes(`Path:${messageTypes.TURN_END}`)) {
                     // end of turn, close stream
                     this._log("->", message)
+                    this._streams[requestId].turnEnded = true
                     this._streams[requestId].audio.push(null)
                 } else if (message.includes(`Path:${messageTypes.RESPONSE}`)) {
                     // context response, ignore
@@ -165,7 +166,15 @@ export class MsEdgeTTS {
             this._ws.onclose = () => {
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
                 for (const requestId in this._streams) {
-                    this._streams[requestId].audio.push(null)
+                    const stream = this._streams[requestId]
+                    if (stream.turnEnded) {
+                        // synthesis finished normally, just close the stream
+                        stream.audio.push(null)
+                    } else {
+                        // socket closed before turn.end: the audio is truncated, so surface it as an
+                        // error instead of silently ending the stream as if it were complete
+                        stream.audio.destroy(new Error("Stream closed before the synthesis completed (no turn.end received). The audio is likely truncated."))
+                    }
                 }
             }
             this._ws.onerror = (event: any) => {
@@ -373,6 +382,12 @@ export class MsEdgeTTS {
             await Promise.all([
                 new Promise((resolve, reject) => {
                     const writableAudioFile = audioStream.pipe(fs.createWriteStream(audioFilePath))
+                    // .pipe() doesn't forward source errors to the writable, so a truncated stream
+                    // would hang here — watch the audio stream directly and reject on its error
+                    audioStream.once("error", (e) => {
+                        writableAudioFile.destroy()
+                        reject(e)
+                    })
                     writableAudioFile.once("close", async () => {
                         if (writableAudioFile.bytesWritten > 0) {
                             resolve(audioFilePath)
@@ -457,6 +472,7 @@ export class MsEdgeTTS {
         this._streams[requestId] = {
             audio: audioStream,
             metadata: metadataStream,
+            turnEnded: false,
         }
         this._send(request).then()
         return {audioStream, metadataStream, requestId}
