@@ -97,6 +97,16 @@ export class MsEdgeTTS {
     }
 
     private async _initClient() {
+        // Replacing `this._ws` below drops the reference to any previous
+        // socket, so it must be closed here or it is orphaned forever: nothing
+        // else holds it and `close()` can no longer reach it. Both callers can
+        // arrive with a non-OPEN socket still assigned — `setMetadata()` when
+        // the connection died but the voice/format did not change, and the
+        // reconnect loop in `_send()`. A long-lived process that reconnects
+        // per utterance then accumulates sockets until it hits the file
+        // descriptor limit and dies.
+        this._ws?.close();
+
         const synthUrl = await MsEdgeTTS.getSynthUrl();
         const options = {
             headers: {

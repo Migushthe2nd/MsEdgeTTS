@@ -187,3 +187,49 @@ describe("MsEdgeTTS truncated connection", () => {
         expect(outcome).toBe("end")
     })
 })
+
+describe("MsEdgeTTS socket reuse", () => {
+    const settle = () => new Promise((r) => setTimeout(r, 150))
+
+    /**
+     * Reconnecting must not orphan the socket it replaces.
+     *
+     * The leak is only observable on a *half-open* connection: the client sees
+     * readyState !== OPEN, but the underlying descriptor is still held. That is
+     * exactly what Edge produces when it drops an idle stream. Calling
+     * terminate() here would not reproduce it, because that really does close
+     * the socket regardless of what the library does.
+     */
+    it("closes the socket it replaces when reconnecting", async () => {
+        const wss = await new Promise<WebSocketServer>((resolve) => {
+            const s = new WebSocketServer({port: 0})
+            s.on("listening", () => resolve(s))
+        })
+        const {port} = wss.address() as AddressInfo
+        jest.spyOn(MsEdgeTTS as any, "getSynthUrl").mockResolvedValue(`ws://127.0.0.1:${port}`)
+        const tts = new MsEdgeTTS()
+
+        try {
+            await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+
+            const stale = tts["_ws"]
+            const closeSpy = jest.spyOn(stale, "close")
+            // Simulate Edge dropping the stream: the library now believes the
+            // connection is unusable, while the descriptor is still open.
+            Object.defineProperty(stale, "readyState", {value: stale.CLOSED, configurable: true})
+
+            // Same voice, same format -> `changed` is false, so this only
+            // reconnects because the socket is not OPEN.
+            await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+            await settle()
+
+            expect(tts["_ws"]).not.toBe(stale)          // a new socket was created...
+            expect(closeSpy).toHaveBeenCalled()          // ...and the old one was not abandoned
+        } finally {
+            tts.close()
+            await settle()
+            wss.close()
+            jest.restoreAllMocks()
+        }
+    })
+})
