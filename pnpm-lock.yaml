@@ -16,13 +16,13 @@ importers:
         version: 6.0.3
       isomorphic-ws:
         specifier: ^5.0.0
-        version: 5.0.0(ws@8.18.0)
+        version: 5.0.0(ws@8.21.3)
       stream-browserify:
         specifier: ^3.0.0
         version: 3.0.0
       ws:
-        specifier: ^8.14.1
-        version: 8.18.0
+        specifier: ^8.21.3
+        version: 8.21.3
     devDependencies:
       '@types/jest':
         specifier: ^29.5.12
@@ -1423,8 +1423,8 @@ packages:
     resolution: {integrity: sha512-7KxauUdBmSdWnmpaGFg+ppNjKF8uNLry8LyzjauQDOVONfFLNKrKvQOxZ/VuTIcS/gge/YNahf5RIIQWTSarlg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
 
-  ws@8.18.0:
-    resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -2370,9 +2370,9 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  isomorphic-ws@5.0.0(ws@8.18.0):
+  isomorphic-ws@5.0.0(ws@8.21.3):
     dependencies:
-      ws: 8.18.0
+      ws: 8.21.3
 
   istanbul-lib-coverage@3.2.2: {}
 
@@ -3095,7 +3095,7 @@ snapshots:
       imurmurhash: 0.1.4
       signal-exit: 3.0.7
 
-  ws@8.18.0: {}
+  ws@8.21.3: {}
 
   y18n@5.0.8: {}
 

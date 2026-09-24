@@ -187,3 +187,63 @@ describe("MsEdgeTTS truncated connection", () => {
         expect(outcome).toBe("end")
     })
 })
+
+describe("MsEdgeTTS socket reuse", () => {
+    it("preserves active streams, coalesces reconnects, and terminates stale sockets", async () => {
+        const wss = await new Promise<WebSocketServer>((resolve) => {
+            const s = new WebSocketServer({port: 0})
+            s.on("listening", () => resolve(s))
+        })
+        const {port} = wss.address() as AddressInfo
+        const requestSeen = new Promise<{socket: any, requestId: string}>((resolve) => {
+            wss.on("connection", (socket) => socket.on("message", (raw) => {
+                const match = /X-RequestId:(.*?)\r\n/.exec(raw.toString())
+                if (match) resolve({socket, requestId: match[1]})
+            }))
+        })
+        jest.spyOn(MsEdgeTTS as any, "getSynthUrl").mockResolvedValue(`ws://127.0.0.1:${port}`)
+        const tts = new MsEdgeTTS()
+
+        try {
+            await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+            const oldSocket = tts["_ws"]
+            const {audioStream} = tts.toStream("Keep this synthesis alive")
+            const outcome = new Promise<string>((resolve, reject) => {
+                audioStream.once("end", () => resolve("end"))
+                audioStream.once("error", reject)
+            })
+            audioStream.on("data", () => {})
+            const {socket: serverSocket, requestId} = await requestSeen
+
+            await Promise.all([
+                tts.setMetadata("en-GB-SoniaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {}),
+                tts.setMetadata("en-US-GuyNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {}),
+            ])
+            const currentSocket = tts["_ws"]
+            expect(currentSocket).not.toBe(oldSocket)
+            expect(wss.clients.size).toBe(2)
+            expect(oldSocket.readyState).toBe(oldSocket.OPEN)
+
+            serverSocket.send(`X-RequestId:${requestId}\r\nPath:turn.start\r\n\r\n{}`)
+            serverSocket.send(Buffer.concat([
+                Buffer.from(`X-RequestId:${requestId}\r\nPath:audio\r\n`),
+                Buffer.from([0, 1, 2, 3]),
+            ]))
+            serverSocket.send(`X-RequestId:${requestId}\r\nPath:turn.end\r\n\r\n{}`)
+
+            await expect(outcome).resolves.toBe("end")
+            expect([oldSocket.CLOSING, oldSocket.CLOSED]).toContain(oldSocket.readyState)
+            expect(currentSocket.readyState).toBe(currentSocket.OPEN)
+
+            const rawSocket = (currentSocket as any)._socket
+            currentSocket.close()
+            expect(currentSocket.readyState).toBe(currentSocket.CLOSING)
+            await tts.setMetadata("en-US-GuyNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+            expect(rawSocket.destroyed).toBe(true)
+        } finally {
+            tts.close()
+            await new Promise<void>((resolve) => wss.close(() => resolve()))
+            jest.restoreAllMocks()
+        }
+    })
+})
