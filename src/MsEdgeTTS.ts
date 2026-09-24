@@ -66,6 +66,7 @@ export class MsEdgeTTS {
     private readonly _enableLogger
     private readonly _isBrowser: boolean
     private _ws: WebSocket
+    private _clientInit?: Promise<void>
     private _voice
     private _outputFormat
     private _metadataOptions: MetadataOptions = new MetadataOptions()
@@ -97,7 +98,17 @@ export class MsEdgeTTS {
         return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
     }
 
-    private async _initClient() {
+    private _initClient(): Promise<void> {
+        if (this._clientInit) return this._clientInit
+        const init = this._createClient()
+        const tracked = init.finally(() => {
+            if (this._clientInit === tracked) this._clientInit = undefined
+        })
+        this._clientInit = tracked
+        return tracked
+    }
+
+    private async _createClient() {
         const previous = this._ws
         if (previous) {
             if (previous.readyState === previous.OPEN
@@ -120,7 +131,7 @@ export class MsEdgeTTS {
             : new WebSocket(synthUrl, {...options, agent: this._agent})
 
         ws.binaryType = "arraybuffer"
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             ws.onopen = () => {
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:${messageTypes.SPEECH_CONFIG}${MsEdgeTTS.JSON_XML_DELIM}

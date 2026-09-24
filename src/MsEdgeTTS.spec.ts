@@ -189,7 +189,7 @@ describe("MsEdgeTTS truncated connection", () => {
 })
 
 describe("MsEdgeTTS socket reuse", () => {
-    it("lets active synthesis finish and terminates a stale socket on reconnect", async () => {
+    it("preserves active streams, coalesces reconnects, and terminates stale sockets", async () => {
         const wss = await new Promise<WebSocketServer>((resolve) => {
             const s = new WebSocketServer({port: 0})
             s.on("listening", () => resolve(s))
@@ -215,9 +215,13 @@ describe("MsEdgeTTS socket reuse", () => {
             audioStream.on("data", () => {})
             const {socket: serverSocket, requestId} = await requestSeen
 
-            await tts.setMetadata("en-GB-SoniaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+            await Promise.all([
+                tts.setMetadata("en-GB-SoniaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {}),
+                tts.setMetadata("en-US-GuyNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {}),
+            ])
             const currentSocket = tts["_ws"]
             expect(currentSocket).not.toBe(oldSocket)
+            expect(wss.clients.size).toBe(2)
             expect(oldSocket.readyState).toBe(oldSocket.OPEN)
 
             serverSocket.send(`X-RequestId:${requestId}\r\nPath:turn.start\r\n\r\n{}`)
@@ -234,7 +238,7 @@ describe("MsEdgeTTS socket reuse", () => {
             const rawSocket = (currentSocket as any)._socket
             currentSocket.close()
             expect(currentSocket.readyState).toBe(currentSocket.CLOSING)
-            await tts.setMetadata("en-GB-SoniaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
+            await tts.setMetadata("en-US-GuyNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {})
             expect(rawSocket.destroyed).toBe(true)
         } finally {
             tts.close()
