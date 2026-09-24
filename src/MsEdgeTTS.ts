@@ -69,7 +69,8 @@ export class MsEdgeTTS {
     private _voice
     private _outputFormat
     private _metadataOptions: MetadataOptions = new MetadataOptions()
-    private _streams: { [key: string]: { audio: Readable, metadata: Readable, turnEnded: boolean } } = {}
+    private _streams: { [key: string]: { audio: Readable, metadata: Readable, turnEnded: boolean, socket?: WebSocket } } = {}
+    private _retiredSockets: WebSocket[] = []
     private _startTime = 0
     private readonly _agent: Agent
 
@@ -97,15 +98,15 @@ export class MsEdgeTTS {
     }
 
     private async _initClient() {
-        // Replacing `this._ws` below drops the reference to any previous
-        // socket, so it must be closed here or it is orphaned forever: nothing
-        // else holds it and `close()` can no longer reach it. Both callers can
-        // arrive with a non-OPEN socket still assigned — `setMetadata()` when
-        // the connection died but the voice/format did not change, and the
-        // reconnect loop in `_send()`. A long-lived process that reconnects
-        // per utterance then accumulates sockets until it hits the file
-        // descriptor limit and dies.
-        this._ws?.close();
+        const previous = this._ws
+        if (previous) {
+            if (previous.readyState === previous.OPEN
+                && Object.values(this._streams).some(stream => stream.socket === previous && !stream.turnEnded)) {
+                this._retiredSockets.push(previous)
+            } else {
+                this._closeSocket(previous)
+            }
+        }
 
         const synthUrl = await MsEdgeTTS.getSynthUrl();
         const options = {
@@ -114,13 +115,13 @@ export class MsEdgeTTS {
                 "Origin": "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
             }
         };
-        this._ws = this._isBrowser
+        const ws = this._ws = this._isBrowser
             ? new WebSocket(synthUrl, options)
             : new WebSocket(synthUrl, {...options, agent: this._agent})
 
-        this._ws.binaryType = "arraybuffer"
+        ws.binaryType = "arraybuffer"
         return new Promise((resolve, reject) => {
-            this._ws.onopen = () => {
+            ws.onopen = () => {
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:${messageTypes.SPEECH_CONFIG}${MsEdgeTTS.JSON_XML_DELIM}
                     {
@@ -136,9 +137,9 @@ export class MsEdgeTTS {
                             }
                         }
                     }
-                `).then(resolve)
+                `, undefined, ws).then(resolve)
             }
-            this._ws.onmessage = (m) => {
+            ws.onmessage = (m) => {
                 const buffer = Buffer.from(m.data as ArrayBuffer)
                 const message = buffer.toString()
 
@@ -152,6 +153,7 @@ export class MsEdgeTTS {
                     this._log("->", message)
                     this._streams[requestId].turnEnded = true
                     this._streams[requestId].audio.push(null)
+                    this._closeRetiredSockets()
                 } else if (message.includes(`Path:${messageTypes.RESPONSE}`)) {
                     // context response, ignore
                     this._log("->", message)
@@ -173,10 +175,11 @@ export class MsEdgeTTS {
                     this._log("->", "UNKNOWN MESSAGE", message)
                 }
             }
-            this._ws.onclose = () => {
+            ws.onclose = () => {
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
                 for (const requestId in this._streams) {
                     const stream = this._streams[requestId]
+                    if (stream.socket !== ws) continue
                     if (stream.turnEnded) {
                         // synthesis finished normally, just close the stream
                         stream.audio.push(null)
@@ -187,7 +190,7 @@ export class MsEdgeTTS {
                     }
                 }
             }
-            this._ws.onerror = (event: any) => {
+            ws.onerror = (event: any) => {
                 // Node's `ws` library fires either a native Error or an ErrorEvent wrapping one.
                 const underlying = event?.error ?? event
                 const message = underlying?.message ?? String(underlying)
@@ -198,6 +201,24 @@ export class MsEdgeTTS {
                 wrapped.cause = underlying
                 reject(wrapped)
             }
+        })
+    }
+
+    private _closeSocket(socket: WebSocket) {
+        if (socket.readyState === socket.CLOSED) return
+        const terminate = (socket as WebSocket & { terminate?: () => void }).terminate
+        if (socket.readyState !== socket.OPEN && terminate) terminate.call(socket)
+        else socket.close()
+    }
+
+    private _closeRetiredSockets() {
+        // ponytail: scans active streams on drain; per-socket counters if this becomes hot at high concurrency.
+        this._retiredSockets = this._retiredSockets.filter(socket => {
+            if (Object.values(this._streams).some(stream => stream.socket === socket && !stream.turnEnded)) {
+                return true
+            }
+            socket.close()
+            return false
         })
     }
 
@@ -224,15 +245,18 @@ export class MsEdgeTTS {
             .toUpperCase()
     }
 
-    private async _send(message) {
-        for (let i = 1; i <= 3 && this._ws.readyState !== this._ws.OPEN; i++) {
+    private async _send(message, requestId?: string, initialSocket?: WebSocket) {
+        let socket = initialSocket ?? this._ws
+        for (let i = 1; i <= 3 && socket.readyState !== socket.OPEN; i++) {
             if (i == 1) {
                 this._startTime = Date.now()
             }
             this._log("connecting: ", i)
             await this._initClient()
+            socket = this._ws
         }
-        this._ws.send(message, () => {
+        if (requestId && this._streams[requestId]) this._streams[requestId].socket = socket
+        socket.send(message, () => {
             this._log("<-", message)
         })
     }
@@ -316,7 +340,10 @@ export class MsEdgeTTS {
      * Close the WebSocket connection.
      */
     close() {
-        this._ws?.close()
+        const sockets = new Set(this._retiredSockets)
+        if (this._ws) sockets.add(this._ws)
+        this._retiredSockets = []
+        sockets.forEach(socket => this._closeSocket(socket))
     }
 
     /**
@@ -461,6 +488,7 @@ export class MsEdgeTTS {
             },
             destroy(error: Error | null, callback: (error: (Error | null)) => void) {
                 delete self._streams[requestId]
+                self._closeRetiredSockets()
                 callback(error)
             },
         })
@@ -484,7 +512,7 @@ export class MsEdgeTTS {
             metadata: metadataStream,
             turnEnded: false,
         }
-        this._send(request).then()
+        this._send(request, requestId).then()
         return {audioStream, metadataStream, requestId}
     }
 
