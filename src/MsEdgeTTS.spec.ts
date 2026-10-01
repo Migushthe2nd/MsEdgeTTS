@@ -247,3 +247,47 @@ describe("MsEdgeTTS socket reuse", () => {
         }
     })
 })
+
+describe("MsEdgeTTS reconnect failure", () => {
+    // Reproduces the crash where a failed reconnect inside `_send` becomes an
+    // unhandled promise rejection (from `this._send(...).then()` with no .catch),
+    // which on Node >=15 tears down the host process. The failure should instead
+    // surface on the returned audioStream as a catchable "error" event.
+    it("errors the audio stream (not an unhandled rejection) when a reconnect fails", async () => {
+        // 1. Stand up a real local server and connect to it.
+        const wss = await new Promise<WebSocketServer>((resolve) => {
+            const s = new WebSocketServer({port: 0})
+            s.on("listening", () => resolve(s))
+        })
+        const {port} = wss.address() as AddressInfo
+        const getSynthUrl = jest.spyOn(MsEdgeTTS as any, "getSynthUrl")
+        getSynthUrl.mockResolvedValue(`ws://127.0.0.1:${port}`)
+        const tts = new MsEdgeTTS()
+
+        try {
+            await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS)
+
+            // 2. Make the current socket stale and the next reconnect impossible.
+            tts["_ws"].close()                                         // force _send to reconnect
+            getSynthUrl.mockResolvedValue("ws://127.0.0.1:1/invalid")  // and make that reconnect fail
+
+            // 3. A fresh request now has to reconnect -> the reconnect fails.
+            const {audioStream} = tts.toStream("this request cannot be synthesized")
+
+            // 4. Whichever happens first wins. Before the fix an unhandledRejection
+            //    fires (stream never errors); after the fix the stream errors.
+            const outcome = await new Promise<string>((resolve) => {
+                audioStream.on("data", () => {})
+                audioStream.once("error", () => resolve("error"))
+                audioStream.once("end", () => resolve("end"))
+                process.once("unhandledRejection", () => resolve("unhandledRejection"))
+            })
+
+            expect(outcome).toBe("error")
+        } finally {
+            tts.close()
+            await new Promise<void>((resolve) => wss.close(() => resolve()))
+            jest.restoreAllMocks()
+        }
+    }, 20000)
+})
