@@ -523,7 +523,11 @@ export class MsEdgeTTS {
             metadata: metadataStream,
             turnEnded: false,
         }
-        this._send(request, requestId).then()
+        this._send(request, requestId).catch((error) => {
+            // Surface _send/reconnect failures on the audio stream (consistent with #35)
+            // instead of an unhandled rejection that crashes the host process.
+            this._streams[requestId]?.audio.destroy(error)
+        })
         return {audioStream, metadataStream, requestId}
     }
 
