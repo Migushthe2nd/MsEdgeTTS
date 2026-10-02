@@ -305,13 +305,11 @@ describe("MsEdgeTTS reconnect failure", () => {
             // 3. A fresh request now has to reconnect -> the reconnect fails.
             const {audioStream} = tts.toStream("this request cannot be synthesized")
 
-            // 4. Whichever happens first wins. Before the fix an unhandledRejection
-            //    fires (stream never errors); after the fix the stream errors.
+            // The failed reconnect should error the stream, not end it successfully.
             const outcome = await new Promise<string>((resolve) => {
                 audioStream.on("data", () => {})
                 audioStream.once("error", () => resolve("error"))
                 audioStream.once("end", () => resolve("end"))
-                process.once("unhandledRejection", () => resolve("unhandledRejection"))
             })
 
             expect(outcome).toBe("error")
