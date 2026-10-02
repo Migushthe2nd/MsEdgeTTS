@@ -441,7 +441,7 @@ export class MsEdgeTTS {
                             resolve(audioFilePath)
                         } else {
                             reject(new Error("No audio data received"))
-                            fs.unlinkSync(audioFilePath)
+                            fs.rmSync(audioFilePath, {force: true})
                         }
                     })
                     writableAudioFile.once("error", reject)
@@ -464,7 +464,7 @@ export class MsEdgeTTS {
                             resolve(metadataFilePath)
                         } else {
                             reject(new Error("No metadata received"))
-                            fs.unlinkSync(metadataFilePath)
+                            fs.rmSync(metadataFilePath, {force: true})
                         }
                     })
                     metadataStream.once("error", reject)
@@ -523,7 +523,11 @@ export class MsEdgeTTS {
             metadata: metadataStream,
             turnEnded: false,
         }
-        this._send(request, requestId).then()
+        this._send(request, requestId).catch((error) => {
+            // Surface _send/reconnect failures on the audio stream (consistent with #35)
+            // instead of an unhandled rejection that crashes the host process.
+            this._streams[requestId]?.audio.destroy(error)
+        })
         return {audioStream, metadataStream, requestId}
     }
 
