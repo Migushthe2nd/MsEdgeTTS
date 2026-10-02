@@ -441,7 +441,7 @@ export class MsEdgeTTS {
                             resolve(audioFilePath)
                         } else {
                             reject(new Error("No audio data received"))
-                            fs.unlinkSync(audioFilePath)
+                            fs.rmSync(audioFilePath, {force: true})
                         }
                     })
                     writableAudioFile.once("error", reject)
@@ -464,7 +464,7 @@ export class MsEdgeTTS {
                             resolve(metadataFilePath)
                         } else {
                             reject(new Error("No metadata received"))
-                            fs.unlinkSync(metadataFilePath)
+                            fs.rmSync(metadataFilePath, {force: true})
                         }
                     })
                     metadataStream.once("error", reject)

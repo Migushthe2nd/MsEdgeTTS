@@ -1,11 +1,12 @@
 import "jest"
 import {MsEdgeTTS} from "./MsEdgeTTS"
 import {OUTPUT_EXTENSIONS, OUTPUT_FORMAT} from "./Output"
-import {mkdirSync, readFileSync, rmSync} from "fs"
+import {mkdirSync, mkdtempSync, readFileSync, rmSync} from "fs"
 import {existsSync} from "node:fs"
 import {join} from "path"
 import {AddressInfo} from "net"
 import {WebSocketServer} from "ws"
+import {tmpdir} from "os"
 
 describe("MsEdgeTTS onerror", () => {
     it("should reject with an Error instance containing diagnostic info when the socket errors", async () => {
@@ -249,6 +250,36 @@ describe("MsEdgeTTS socket reuse", () => {
 })
 
 describe("MsEdgeTTS reconnect failure", () => {
+    it("rejects toFile without crashing when a reconnect fails with metadata enabled", async () => {
+        const wss = await new Promise<WebSocketServer>((resolve) => {
+            const server = new WebSocketServer({port: 0})
+            server.once("listening", () => resolve(server))
+        })
+        const {port} = wss.address() as AddressInfo
+        const getSynthUrl = jest.spyOn(MsEdgeTTS as any, "getSynthUrl")
+            .mockResolvedValue(`ws://127.0.0.1:${port}`)
+        const dir = mkdtempSync(join(tmpdir(), "msedgetts-reconnect-"))
+        const tts = new MsEdgeTTS()
+
+        try {
+            await tts.setMetadata("en-US-AriaNeural", OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS, {
+                wordBoundaryEnabled: true,
+            })
+            tts["_ws"].close()
+            getSynthUrl.mockResolvedValue("ws://127.0.0.1:1/invalid")
+
+            await expect(tts.toFile(dir, "this request cannot be synthesized"))
+                .rejects.toThrow("Edge TTS WebSocket error:")
+            expect(Object.keys(tts["_streams"])).toHaveLength(0)
+            expect(existsSync(join(dir, "metadata.json"))).toBe(false)
+        } finally {
+            tts.close()
+            await new Promise<void>((resolve) => wss.close(() => resolve()))
+            rmSync(dir, {recursive: true, force: true})
+            jest.restoreAllMocks()
+        }
+    })
+
     // Reproduces the crash where a failed reconnect inside `_send` becomes an
     // unhandled promise rejection (from `this._send(...).then()` with no .catch),
     // which on Node >=15 tears down the host process. The failure should instead
