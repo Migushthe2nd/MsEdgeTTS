@@ -58,9 +58,11 @@ const tts = new MsEdgeTTS({
 ```
 
 These are the defaults in milliseconds; set either to `0` to disable it. Values must be integers between `0` and `2147483647`.
-The connection deadline bounds the WebSocket handshake, and rejects `setMetadata()` or a pending synthesis request if it expires.
+The connection deadline bounds the WebSocket handshake, including any clock-correction retry, and rejects `setMetadata()` or a pending synthesis request if it expires.
 The synthesis deadline applies separately to each request: it starts when SSML is sent and resets when that request receives activity, so it does not limit the total audio duration.
 A synthesis timeout emits an `error` on its audio stream (handle it with `audioStream.on("error", ...)`), closes its metadata stream, and rejects `toFile()`/`rawToFile()`; other requests can continue on the same connection.
+
+In Node.js, a handshake rejected with HTTP 403 and a valid server `Date` is retried once using the server's time for authentication. The correction is shared across instances and does not change the machine's clock. Browsers cannot expose these handshake headers, so automatic clock correction is unavailable there.
 
 ### Write to file
 

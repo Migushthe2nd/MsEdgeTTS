@@ -67,10 +67,12 @@ export class MsEdgeTTS {
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
     private static VOICE_LANG_REGEX = /\b[a-z]{2,}-[A-Z]{2}\b/
+    private static _clockOffsetMs = 0
     private readonly _enableLogger
     private readonly _isBrowser: boolean
     private _ws: WebSocket
     private _clientInit?: Promise<void>
+    private _clientGeneration = 0
     private _voice
     private _outputFormat
     private _metadataOptions: MetadataOptions = new MetadataOptions()
@@ -121,7 +123,7 @@ export class MsEdgeTTS {
         return tracked
     }
 
-    private async _createClient(deadline = this._connectionTimeoutMs ? Date.now() + this._connectionTimeoutMs : 0): Promise<void> {
+    private async _createClient(retryClock = true, deadline = this._connectionTimeoutMs ? Date.now() + this._connectionTimeoutMs : 0, generation = this._clientGeneration): Promise<void> {
         const previous = this._ws
         if (previous) {
             if (previous.readyState === previous.OPEN
@@ -133,6 +135,7 @@ export class MsEdgeTTS {
         }
 
         const synthUrl = await MsEdgeTTS.getSynthUrl();
+        if (generation !== this._clientGeneration) throw new Error("Edge TTS connection closed before initialization completed.")
         const remaining = deadline ? deadline - Date.now() : 0
         if (deadline && remaining <= 0) throw new Error(`Edge TTS connection timed out after ${this._connectionTimeoutMs} milliseconds.`)
         const options = {
@@ -153,6 +156,22 @@ export class MsEdgeTTS {
                 reject(new Error(`Edge TTS connection timed out after ${this._connectionTimeoutMs} milliseconds.`))
                 this._closeSocket(ws)
             }, remaining) : undefined
+            if (!this._isBrowser) {
+                ws.once("unexpected-response", (request, response) => {
+                    if (!connecting || ws.readyState !== ws.CONNECTING || generation !== this._clientGeneration) {
+                        request.destroy()
+                        response.destroy()
+                        return
+                    }
+                    const error = Object.assign(new Error(`Unexpected server response: ${response.statusCode}`), {
+                        statusCode: response.statusCode,
+                        serverDate: response.headers.date,
+                    })
+                    // This listener suppresses ws's default handshake abort, so close both HTTP objects.
+                    request.destroy(error)
+                    response.destroy()
+                })
+            }
             ws.onopen = () => {
                 if (!connecting) return
                 connecting = false
@@ -257,6 +276,15 @@ export class MsEdgeTTS {
                 }
                 this._closeSocket(ws)
             }
+        }).catch(error => {
+            const underlying = error.cause
+            const serverTime = typeof underlying?.serverDate === "string" ? Date.parse(underlying.serverDate) : NaN
+            if (retryClock && underlying?.statusCode === 403 && Number.isFinite(serverTime)
+                && generation === this._clientGeneration && (!deadline || Date.now() < deadline)) {
+                MsEdgeTTS._clockOffsetMs = serverTime - Date.now()
+                return this._createClient(false, deadline, generation)
+            }
+            throw error
         })
     }
 
@@ -287,7 +315,7 @@ export class MsEdgeTTS {
     }
 
     private static async generateSecMsGec(trustedClientToken: string): Promise<string> {
-        const ticks = Math.floor(Date.now() / 1000) + 11644473600
+        const ticks = Math.floor((Date.now() + MsEdgeTTS._clockOffsetMs) / 1000) + 11644473600
         const rounded = ticks - (ticks % 300)
         const windowsTicks = rounded * 10000000
 
@@ -423,6 +451,7 @@ export class MsEdgeTTS {
      * Close the WebSocket connection.
      */
     close() {
+        this._clientGeneration++
         const sockets = new Set(this._retiredSockets)
         if (this._ws) sockets.add(this._ws)
         this._retiredSockets = []
