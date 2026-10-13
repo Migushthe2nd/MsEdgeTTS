@@ -59,7 +59,7 @@ type Options = {
 export class MsEdgeTTS {
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
-    private static WSS_URL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
+    private static WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
     private static VOICE_LANG_REGEX = /\w{2}-\w{2}/
@@ -95,7 +95,7 @@ export class MsEdgeTTS {
     private static async getSynthUrl(): Promise<string> {
         const req_id = MsEdgeTTS.generateUUID(); // Generate the request ID
         const secMsGEC = await MsEdgeTTS.generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
-        return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
+        return `${this.WSS_URL}?Ocp-Apim-Subscription-Key=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
     }
 
     private _initClient(): Promise<void> {
