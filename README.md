@@ -48,6 +48,20 @@ audioStream.on("close", () => {
 });
 ```
 
+### Connection and synthesis deadlines
+
+```js
+const tts = new MsEdgeTTS({
+    connectionTimeoutMs: 10000,
+    synthesisTimeoutMs: 60000,
+});
+```
+
+These are the defaults in milliseconds; set either to `0` to disable it. Values must be integers between `0` and `2147483647`.
+The connection deadline bounds the WebSocket handshake, and rejects `setMetadata()` or a pending synthesis request if it expires.
+The synthesis deadline applies separately to each request: it starts when SSML is sent and resets when that request receives activity, so it does not limit the total audio duration.
+A synthesis timeout emits an `error` on its audio stream (handle it with `audioStream.on("error", ...)`), closes its metadata stream, and rejects `toFile()`/`rawToFile()`; other requests can continue on the same connection.
+
 ### Write to file
 
 ```js

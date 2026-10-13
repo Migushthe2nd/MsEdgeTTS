@@ -53,7 +53,11 @@ type Options = {
      * */
     agent?: Agent,
     /** whether to enable the built-in logger. This logs connections inits, disconnects, and incoming data to the console */
-    enableLogger?: boolean
+    enableLogger?: boolean,
+    /** WebSocket connection deadline in milliseconds. Default is 10000; 0 disables it. */
+    connectionTimeoutMs?: number,
+    /** Per-request synthesis idle deadline in milliseconds. Default is 60000; 0 disables it. */
+    synthesisTimeoutMs?: number
 }
 
 export class MsEdgeTTS {
@@ -70,10 +74,12 @@ export class MsEdgeTTS {
     private _voice
     private _outputFormat
     private _metadataOptions: MetadataOptions = new MetadataOptions()
-    private _streams: { [key: string]: { audio: Readable, metadata: Readable, turnEnded: boolean, socket?: WebSocket } } = {}
+    private _streams: { [key: string]: { audio: Readable, metadata: Readable, turnEnded: boolean, socket?: WebSocket, timeout?: ReturnType<typeof setTimeout> } } = {}
     private _retiredSockets: WebSocket[] = []
     private _startTime = 0
     private readonly _agent: Agent
+    private readonly _connectionTimeoutMs: number
+    private readonly _synthesisTimeoutMs: number
 
     private _log(...o: any[]) {
         if (this._enableLogger) {
@@ -90,6 +96,13 @@ export class MsEdgeTTS {
         this._agent = options?.agent || undefined
         this._enableLogger = options?.enableLogger || false
         this._isBrowser = typeof window !== "undefined" && typeof window.document !== "undefined"
+        this._connectionTimeoutMs = options?.connectionTimeoutMs === undefined ? 10000 : options.connectionTimeoutMs
+        this._synthesisTimeoutMs = options?.synthesisTimeoutMs === undefined ? 60000 : options.synthesisTimeoutMs
+        for (const [name, value] of Object.entries({connectionTimeoutMs: this._connectionTimeoutMs, synthesisTimeoutMs: this._synthesisTimeoutMs})) {
+            if (!Number.isInteger(value) || value < 0 || value > 2147483647) {
+                throw new Error(`${name} must be an integer between 0 and 2147483647 milliseconds.`)
+            }
+        }
     }
 
     private static async getSynthUrl(): Promise<string> {
@@ -108,18 +121,20 @@ export class MsEdgeTTS {
         return tracked
     }
 
-    private async _createClient() {
+    private async _createClient(deadline = this._connectionTimeoutMs ? Date.now() + this._connectionTimeoutMs : 0): Promise<void> {
         const previous = this._ws
         if (previous) {
             if (previous.readyState === previous.OPEN
                 && Object.values(this._streams).some(stream => stream.socket === previous && !stream.turnEnded)) {
-                this._retiredSockets.push(previous)
+                if (!this._retiredSockets.includes(previous)) this._retiredSockets.push(previous)
             } else {
                 this._closeSocket(previous)
             }
         }
 
         const synthUrl = await MsEdgeTTS.getSynthUrl();
+        const remaining = deadline ? deadline - Date.now() : 0
+        if (deadline && remaining <= 0) throw new Error(`Edge TTS connection timed out after ${this._connectionTimeoutMs} milliseconds.`)
         const options = {
             headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0",
@@ -132,7 +147,16 @@ export class MsEdgeTTS {
 
         ws.binaryType = "arraybuffer"
         return new Promise<void>((resolve, reject) => {
+            let connecting = true
+            const connectionTimeout = this._connectionTimeoutMs ? setTimeout(() => {
+                connecting = false
+                reject(new Error(`Edge TTS connection timed out after ${this._connectionTimeoutMs} milliseconds.`))
+                this._closeSocket(ws)
+            }, remaining) : undefined
             ws.onopen = () => {
+                if (!connecting) return
+                connecting = false
+                clearTimeout(connectionTimeout)
                 this._log("Connected in", (Date.now() - this._startTime) / 1000, "seconds")
                 this._send(`Content-Type:application/json; charset=utf-8\r\nPath:${messageTypes.SPEECH_CONFIG}${MsEdgeTTS.JSON_XML_DELIM}
                     {
@@ -164,21 +188,26 @@ export class MsEdgeTTS {
                 if (message.includes(`Path:${messageTypes.TURN_START}`)) {
                     // start of turn, ignore
                     this._log("->", message)
+                    this._resetSynthesisTimeout(requestId)
                 } else if (message.includes(`Path:${messageTypes.TURN_END}`)) {
                     // end of turn, close stream
                     this._log("->", message)
+                    clearTimeout(stream.timeout)
+                    stream.timeout = undefined
                     stream.turnEnded = true
                     stream.audio.push(null)
                     this._closeRetiredSockets()
                 } else if (message.includes(`Path:${messageTypes.RESPONSE}`)) {
                     // context response, ignore
                     this._log("->", message)
+                    this._resetSynthesisTimeout(requestId)
                 } else if (message.includes(`Path:${messageTypes.AUDIO_METADATA}`)) {
                     // audio metadata, wordboundary/sentenceboundary
                     const dataStartIndex = buffer.indexOf(MsEdgeTTS.JSON_XML_DELIM) + MsEdgeTTS.JSON_XML_DELIM.length
                     const data = buffer.subarray(dataStartIndex)
 
                     this._log("->", message)
+                    this._resetSynthesisTimeout(requestId)
                     this._pushMetadata(data, requestId)
                 } else if (message.includes(`Path:${messageTypes.AUDIO}`) && m.data instanceof ArrayBuffer) {
                     const dataStartIndex = buffer.indexOf(MsEdgeTTS.AUDIO_DELIM) + MsEdgeTTS.AUDIO_DELIM.length
@@ -186,17 +215,21 @@ export class MsEdgeTTS {
                     const data = buffer.subarray(dataStartIndex)
 
                     this._log("->", headers)
+                    this._resetSynthesisTimeout(requestId)
                     this._pushAudioData(data, requestId)
                 } else {
                     this._log("->", "UNKNOWN MESSAGE", message)
                 }
             }
             ws.onclose = () => {
+                connecting = false
+                clearTimeout(connectionTimeout)
                 reject(new Error("Edge TTS connection closed before initialization completed."))
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
                 for (const requestId in this._streams) {
                     const stream = this._streams[requestId]
                     if (stream.socket !== ws) continue
+                    clearTimeout(stream.timeout)
                     if (stream.turnEnded) {
                         // synthesis finished normally, just close the stream
                         stream.audio.push(null)
@@ -208,6 +241,8 @@ export class MsEdgeTTS {
                 }
             }
             ws.onerror = (event: any) => {
+                connecting = false
+                clearTimeout(connectionTimeout)
                 // Node's `ws` library fires either a native Error or an ErrorEvent wrapping one.
                 const underlying = event?.error ?? event
                 const message = underlying?.message ?? String(underlying)
@@ -283,6 +318,7 @@ export class MsEdgeTTS {
             stream.socket = socket
         }
         if (socket.readyState !== socket.OPEN) throw new Error("Edge TTS WebSocket is not open.")
+        if (requestId) this._resetSynthesisTimeout(requestId)
         if (this._isBrowser) {
             socket.send(message)
             this._log("<-", message)
@@ -295,6 +331,17 @@ export class MsEdgeTTS {
                 resolve()
             })
         })
+    }
+
+    private _resetSynthesisTimeout(requestId: string) {
+        const stream = this._streams[requestId]
+        if (!stream || stream.audio.destroyed || stream.turnEnded) return
+        clearTimeout(stream.timeout)
+        if (this._synthesisTimeoutMs) {
+            stream.timeout = setTimeout(() => {
+                stream.audio.destroy(new Error(`Edge TTS synthesis timed out after ${this._synthesisTimeoutMs} milliseconds without activity.`))
+            }, this._synthesisTimeoutMs)
+        }
     }
 
     private _pushAudioData(data: Uint8Array, requestId: string) {
@@ -357,7 +404,8 @@ export class MsEdgeTTS {
             || oldOutputFormat !== this._outputFormat
             || oldOptions !== JSON.stringify(this._metadataOptions)
 
-        if (!changed && this._ws?.readyState === WebSocket.OPEN) {
+        if (!changed && !this._clientInit && this._ws?.readyState === WebSocket.OPEN
+            && !this._retiredSockets.includes(this._ws)) {
             return
         }
 
@@ -379,6 +427,7 @@ export class MsEdgeTTS {
         if (this._ws) sockets.add(this._ws)
         this._retiredSockets = []
         for (const stream of Object.values(this._streams)) {
+            clearTimeout(stream.timeout)
             if (!stream.turnEnded) {
                 stream.audio.destroy(new Error("Stream closed before the synthesis completed (no turn.end received). The audio is likely truncated."))
             }
@@ -527,6 +576,7 @@ export class MsEdgeTTS {
             read() {
             },
             destroy(error: Error | null, callback: (error: (Error | null)) => void) {
+                clearTimeout(self._streams[requestId]?.timeout)
                 delete self._streams[requestId]
                 self._closeRetiredSockets()
                 callback(error)

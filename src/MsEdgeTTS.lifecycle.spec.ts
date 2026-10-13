@@ -61,6 +61,12 @@ describe("MsEdgeTTS metadata configuration", () => {
         expect(initialize).toHaveBeenCalledTimes(1)
     })
 
+    it.each(["connectionTimeoutMs", "synthesisTimeoutMs"])("validates %s", option => {
+        for (const value of [-1, 1.5, NaN, Infinity, 2147483648, null]) {
+            expect(() => new MsEdgeTTS({[option]: value} as any)).toThrow(option)
+        }
+        expect(() => new MsEdgeTTS({[option]: 0})).not.toThrow()
+    })
 })
 
 describe("MsEdgeTTS request lifecycle", () => {
@@ -124,6 +130,71 @@ describe("MsEdgeTTS request lifecycle", () => {
         expect(active.socket.readyState).toBe(WebSocket.OPEN)
     })
 
+    it("times out a stalled file request without interrupting an active request", async () => {
+        const tts = await configure({synthesisTimeoutMs: 150})
+        const dir = mkdtempSync(join(tmpdir(), "msedgetts-timeout-"))
+        try {
+            const incoming = once(server, "request")
+            const stalled = expect(tts.toFile(dir, "Never answer this request"))
+                .rejects.toThrow(/synthesis.*timed out/i)
+            const [{socket, requestId}] = await incoming
+            audio(socket, requestId)
+            const active = await request(tts, "Continue sending audio")
+            active.audioStream.resume()
+            const ended = once(active.audioStream, "end")
+            for (let i = 0; i < 3; i++) {
+                await pause(80)
+                audio(active.socket, active.requestId)
+            }
+            turnEnd(active.socket, active.requestId)
+            await Promise.all([stalled, ended])
+            audio(socket, requestId)
+            turnEnd(socket, requestId)
+            expect(Object.keys(tts["_streams"])).toHaveLength(0)
+            expect(active.socket.readyState).toBe(WebSocket.OPEN)
+        } finally {
+            rmSync(dir, {recursive: true, force: true})
+        }
+    })
+
+    it("resets the idle deadline on metadata and clears it at turn.end before buffered audio is consumed", async () => {
+        const tts = await configure({synthesisTimeoutMs: 150})
+        const active = await request(tts, "Metadata keeps this request active")
+        const errors: Error[] = []
+        active.audioStream.on("error", error => errors.push(error))
+        active.metadataStream.resume()
+        for (let i = 0; i < 3; i++) {
+            await pause(80)
+            active.socket.send(`X-RequestId:${active.requestId}\r\nPath:audio.metadata\r\n\r\n{"Metadata":[]}`)
+        }
+        audio(active.socket, active.requestId)
+        turnEnd(active.socket, active.requestId)
+        await pause(200)
+        expect(errors).toEqual([])
+        expect(active.audioStream.destroyed).toBe(false)
+        const ended = once(active.audioStream, "end")
+        active.audioStream.resume()
+        await ended
+        expect(Object.keys(tts["_streams"])).toHaveLength(0)
+    })
+
+    it("disables the synthesis idle deadline with zero", async () => {
+        const tts = await configure({synthesisTimeoutMs: 0})
+        jest.useFakeTimers({doNotFake: ["nextTick", "setImmediate"]})
+        const active = await request(tts, "Wait indefinitely")
+        const errors: Error[] = []
+        active.audioStream.on("error", error => errors.push(error))
+        jest.advanceTimersByTime(120000)
+        expect(errors).toEqual([])
+        expect(active.audioStream.destroyed).toBe(false)
+        jest.useRealTimers()
+        const ended = once(active.audioStream, "end")
+        active.audioStream.resume()
+        audio(active.socket, active.requestId)
+        turnEnd(active.socket, active.requestId)
+        await ended
+    })
+
     it("does not send a cancelled request after a pending reconnect completes", async () => {
         const tts = await configure()
         await tts.setMetadata("en-US-AriaNeural", format)
@@ -149,7 +220,7 @@ describe("MsEdgeTTS request lifecycle", () => {
         const send = jest.spyOn(WebSocket.prototype, "send")
         Object.assign(globalThis, {window: {document: {}}})
         try {
-            const tts = await configure()
+            const tts = await configure({connectionTimeoutMs: 50})
             const active = await request(tts, "Native browser send")
             expect(send.mock.calls.slice(0, 2).map(call => call.length)).toEqual([1, 1])
             const ended = once(active.audioStream, "end")
@@ -166,7 +237,7 @@ describe("MsEdgeTTS request lifecycle", () => {
     })
 
     it("surfaces a socket send failure on the audio stream and clears its request", async () => {
-        const tts = await configure()
+        const tts = await configure({synthesisTimeoutMs: 50})
         jest.spyOn(tts["_ws"], "send").mockImplementationOnce((...args: any[]) => {
             args[args.length - 1](new Error("send failed"))
         })
@@ -208,8 +279,36 @@ describe("MsEdgeTTS connection initialization", () => {
         jest.restoreAllMocks()
     })
 
+    it("rejects and closes a stalled handshake, then permits a fresh connection", async () => {
+        tts = new MsEdgeTTS({connectionTimeoutMs: 50})
+        await expect(tts.setMetadata("en-US-AriaNeural", format)).rejects.toThrow(/connection.*timed out/i)
+        expect(tts["_ws"].readyState).not.toBe(WebSocket.OPEN)
+        server.removeAllListeners("upgrade")
+        server.on("upgrade", (request, socket, head) => {
+            wsServer.handleUpgrade(request, socket, head, () => {})
+        })
+        await tts.setMetadata("en-US-AriaNeural", format)
+        expect(tts["_ws"].readyState).toBe(WebSocket.OPEN)
+    })
+
+    it("disables the connection deadline with zero", async () => {
+        tts = new MsEdgeTTS({connectionTimeoutMs: 0})
+        jest.useFakeTimers({doNotFake: ["nextTick", "setImmediate"]})
+        const upgrade = once(server, "upgrade")
+        let completed = false
+        const initialized = tts.setMetadata("en-US-AriaNeural", format)
+        initialized.then(() => completed = true, () => completed = true)
+        const [request, socket, head] = await upgrade
+        jest.advanceTimersByTime(120000)
+        expect(completed).toBe(false)
+        expect(tts["_ws"].readyState).toBe(WebSocket.CONNECTING)
+        wsServer.handleUpgrade(request, socket, head, () => {})
+        await initialized
+        expect(tts["_ws"].readyState).toBe(WebSocket.OPEN)
+    })
+
     it("rejects initialization when the handshake connection closes", async () => {
-        tts = new MsEdgeTTS()
+        tts = new MsEdgeTTS({connectionTimeoutMs: 0})
         server.removeAllListeners("upgrade")
         server.on("upgrade", (_request, socket) => socket.destroy())
         await expect(tts.setMetadata("en-US-AriaNeural", format)).rejects.toThrow(/WebSocket error|connection closed/)
@@ -233,4 +332,41 @@ describe("MsEdgeTTS connection initialization", () => {
         expect(send).toHaveBeenCalledTimes(2)
     })
 
+    it("retries a timed-out metadata replacement while retaining its older active stream", async () => {
+        const initialTime = Date.now()
+        const now = jest.spyOn(Date, "now").mockReturnValue(initialTime)
+        server.removeAllListeners("upgrade")
+        server.on("upgrade", (request, socket, head) => {
+            wsServer.handleUpgrade(request, socket, head, ws => ws.on("message", raw => {
+                const id = /X-RequestId:(.*?)\r\n/.exec(raw.toString())?.[1]
+                if (id) server.emit("pending-request", {ws, id})
+            }))
+        })
+        tts = new MsEdgeTTS({connectionTimeoutMs: 100, synthesisTimeoutMs: 0})
+        await tts.setMetadata("en-US-AriaNeural", format)
+        const oldSocket = tts["_ws"]
+        const pending = once(server, "pending-request")
+        const {audioStream} = tts.toStream("Keep the older request alive")
+        audioStream.resume()
+        const ended = once(audioStream, "end")
+        ended.catch(() => {})
+        const [{ws, id}] = await pending
+        const getUrl = jest.spyOn(MsEdgeTTS as any, "getSynthUrl")
+        const original = getUrl.getMockImplementation()
+        getUrl.mockImplementationOnce(() => {
+            now.mockReturnValue(initialTime + 200)
+            return original()
+        })
+        const nextFormat = OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS
+        await expect(tts.setMetadata("en-GB-SoniaNeural", nextFormat)).rejects.toThrow(/connection.*timed out/i)
+        await Promise.all([
+            tts.setMetadata("en-GB-SoniaNeural", nextFormat),
+            tts.setMetadata("en-GB-SoniaNeural", nextFormat),
+        ])
+        expect(tts["_ws"] === oldSocket).toBe(false)
+        expect(oldSocket.readyState).toBe(oldSocket.OPEN)
+        expect(tts["_retiredSockets"]).toHaveLength(1)
+        turnEnd(ws, id)
+        await ended
+    })
 })
