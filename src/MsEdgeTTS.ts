@@ -59,8 +59,6 @@ type Options = {
 export class MsEdgeTTS {
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
-    // speech.platform.bing.com refuses synthesis with a 403 since October 2026; Edge now synthesizes here.
-    // The voice list above still answers on the old host.
     private static WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
