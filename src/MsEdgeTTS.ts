@@ -62,7 +62,7 @@ export class MsEdgeTTS {
     private static WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
-    private static VOICE_LANG_REGEX = /\w{2}-\w{2}/
+    private static VOICE_LANG_REGEX = /\b[a-z]{2,}-[A-Z]{2}\b/
     private readonly _enableLogger
     private readonly _isBrowser: boolean
     private _ws: WebSocket
@@ -127,7 +127,7 @@ export class MsEdgeTTS {
             }
         };
         const ws = this._ws = this._isBrowser
-            ? new WebSocket(synthUrl, options)
+            ? new WebSocket(synthUrl)
             : new WebSocket(synthUrl, {...options, agent: this._agent})
 
         ws.binaryType = "arraybuffer"
@@ -148,13 +148,18 @@ export class MsEdgeTTS {
                             }
                         }
                     }
-                `, undefined, ws).then(resolve)
+                `, undefined, ws).then(resolve, error => {
+                    this._closeSocket(ws)
+                    reject(error)
+                })
             }
             ws.onmessage = (m) => {
                 const buffer = Buffer.from(m.data as ArrayBuffer)
                 const message = buffer.toString()
 
-                const requestId = /X-RequestId:(.*?)\r\n/gm.exec(message)[1]
+                const requestId = /X-RequestId:(.*?)\r\n/.exec(message)?.[1]
+                const stream = requestId && this._streams[requestId]
+                if (!stream || stream.audio.destroyed || stream.turnEnded || stream.socket !== ws) return
 
                 if (message.includes(`Path:${messageTypes.TURN_START}`)) {
                     // start of turn, ignore
@@ -162,8 +167,8 @@ export class MsEdgeTTS {
                 } else if (message.includes(`Path:${messageTypes.TURN_END}`)) {
                     // end of turn, close stream
                     this._log("->", message)
-                    this._streams[requestId].turnEnded = true
-                    this._streams[requestId].audio.push(null)
+                    stream.turnEnded = true
+                    stream.audio.push(null)
                     this._closeRetiredSockets()
                 } else if (message.includes(`Path:${messageTypes.RESPONSE}`)) {
                     // context response, ignore
@@ -187,6 +192,7 @@ export class MsEdgeTTS {
                 }
             }
             ws.onclose = () => {
+                reject(new Error("Edge TTS connection closed before initialization completed."))
                 this._log("disconnected after:", (Date.now() - this._startTime) / 1000, "seconds")
                 for (const requestId in this._streams) {
                     const stream = this._streams[requestId]
@@ -211,6 +217,10 @@ export class MsEdgeTTS {
                 )
                 wrapped.cause = underlying
                 reject(wrapped)
+                for (const stream of Object.values(this._streams)) {
+                    if (stream.socket === ws && !stream.turnEnded) stream.audio.destroy(wrapped)
+                }
+                this._closeSocket(ws)
             }
         })
     }
@@ -258,7 +268,8 @@ export class MsEdgeTTS {
 
     private async _send(message, requestId?: string, initialSocket?: WebSocket) {
         let socket = initialSocket ?? this._ws
-        for (let i = 1; i <= 3 && socket.readyState !== socket.OPEN; i++) {
+        for (let i = 1; !initialSocket && i <= 3 && socket.readyState !== socket.OPEN; i++) {
+            if (requestId && !this._streams[requestId]) return
             if (i == 1) {
                 this._startTime = Date.now()
             }
@@ -266,18 +277,32 @@ export class MsEdgeTTS {
             await this._initClient()
             socket = this._ws
         }
-        if (requestId && this._streams[requestId]) this._streams[requestId].socket = socket
-        socket.send(message, () => {
+        if (requestId) {
+            const stream = this._streams[requestId]
+            if (!stream || stream.audio.destroyed || stream.turnEnded) return
+            stream.socket = socket
+        }
+        if (socket.readyState !== socket.OPEN) throw new Error("Edge TTS WebSocket is not open.")
+        if (this._isBrowser) {
+            socket.send(message)
             this._log("<-", message)
+            return
+        }
+        await new Promise<void>((resolve, reject) => {
+            socket.send(message, (error?: Error) => {
+                if (error) return reject(error)
+                this._log("<-", message)
+                resolve()
+            })
         })
     }
 
     private _pushAudioData(data: Uint8Array, requestId: string) {
-        this._streams[requestId].audio.push(data)
+        this._streams[requestId]?.audio.push(data)
     }
 
     private _pushMetadata(data: Uint8Array, requestId: string) {
-        this._streams[requestId].metadata.push(data)
+        this._streams[requestId]?.metadata?.push(data)
     }
 
     private _SSMLTemplate(input: string, options: ProsodyOptions = {}): string {
@@ -320,20 +345,19 @@ export class MsEdgeTTS {
         const oldOptions = JSON.stringify(this._metadataOptions)
 
         this._voice = voiceName
-        if (!this._metadataOptions.voiceLocale || (!metadataOptions.voiceLocale && oldVoice !== this._voice)) {
+        Object.assign(this._metadataOptions, metadataOptions)
+        if (!metadataOptions?.voiceLocale && (!this._metadataOptions.voiceLocale || oldVoice !== this._voice)) {
             const voiceLangMatch = MsEdgeTTS.VOICE_LANG_REGEX.exec(this._voice)
             if (!voiceLangMatch) throw new Error("Could not infer voiceLocale from voiceName, and no voiceLocale was specified!")
             this._metadataOptions.voiceLocale = voiceLangMatch[0]
         }
         this._outputFormat = outputFormat
 
-        Object.assign(this._metadataOptions, metadataOptions)
-
         const changed = oldVoice !== this._voice
             || oldOutputFormat !== this._outputFormat
             || oldOptions !== JSON.stringify(this._metadataOptions)
 
-        if (!changed && this._ws.readyState === this._ws.OPEN) {
+        if (!changed && this._ws?.readyState === WebSocket.OPEN) {
             return
         }
 
@@ -354,6 +378,11 @@ export class MsEdgeTTS {
         const sockets = new Set(this._retiredSockets)
         if (this._ws) sockets.add(this._ws)
         this._retiredSockets = []
+        for (const stream of Object.values(this._streams)) {
+            if (!stream.turnEnded) {
+                stream.audio.destroy(new Error("Stream closed before the synthesis completed (no turn.end received). The audio is likely truncated."))
+            }
+        }
         sockets.forEach(socket => this._closeSocket(socket))
     }
 
