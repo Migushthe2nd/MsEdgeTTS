@@ -76,6 +76,8 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 })();
 ```
 
+The directory passed to `toFile()` must already exist. The audio is always saved as `audio.<extension>` (for example `audio.webm`), plus `metadata.json` when sentence or word boundaries are enabled, so calling `toFile()` again with the same directory overwrites the previous files. To choose your own file name, use `toStream()` and pipe `audioStream` to a file instead.
+
 ### Change voice rate, pitch and volume
 ```js
 import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
@@ -86,6 +88,8 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
     const {audioStream} = await tts.toStream("Hi, how are you?", {rate: 0.5, pitch: "+200Hz"});
 })();
 ```
+
+Prosody options are passed per request to `toStream()` or `toFile()` (as the third argument). `setMetadata()` only accepts `MetadataOptions`, so rate, pitch or volume values passed to it are ignored.
 
 ### Use an alternative HTTP Agent
 Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
@@ -134,7 +138,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
         }
      */
     // or as file
-    const {metadataFilePath} = await tts.toFile("Hi, how are you?");
+    const {metadataFilePath} = await tts.toFile("./tmpfolder", "Hi, how are you?");
     /* ->
        {
           "Metadata": [
