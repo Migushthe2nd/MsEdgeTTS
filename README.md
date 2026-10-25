@@ -89,7 +89,7 @@ import {MsEdgeTTS, OUTPUT_FORMAT} from "msedge-tts";
 })();
 ```
 
-Prosody options are passed per request to `toStream()` or `toFile()` (as the third argument). `setMetadata()` only accepts `MetadataOptions`, so rate, pitch or volume values passed to it are ignored.
+Prosody options are passed per request as the second argument to `toStream()` or the third argument to `toFile()`. `setMetadata()` only accepts `MetadataOptions`, so rate, pitch or volume values passed to it are ignored.
 
 ### Use an alternative HTTP Agent
 Use a custom http.Agent implementation like [https-proxy-agent](https://github.com/TooTallNate/proxy-agents) or [socks-proxy-agent](https://github.com/TooTallNate/proxy-agents/tree/main/packages/socks-proxy-agent).
