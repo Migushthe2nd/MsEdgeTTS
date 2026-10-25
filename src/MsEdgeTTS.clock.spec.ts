@@ -11,7 +11,7 @@ import {tmpdir} from "os"
 const format = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
 const serverTime = Date.parse("2026-10-13T10:00:30Z")
 const serverDate = new Date(serverTime).toUTCString()
-const expectedToken = "C47D7293F6FC83A6921F8D69ECFDE7754C3799417ADCF5C422EA5970AC3EE6F6"
+const expectedToken = "461B5A82FDC12AF5-A89B0EBF2C158E7B404FF47B1F12D5579CB3C7D7B18EC8ADE4A4AD0A8036C8DE"
 
 describe("MsEdgeTTS authentication clock recovery", () => {
     let server: ReturnType<typeof createServer>

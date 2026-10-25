@@ -7,6 +7,7 @@ import * as fs from "fs"
 import {Agent} from "http"
 import {ProsodyOptions} from "./Prosody"
 import {joinPath} from "./utils";
+import {hashSecMsGecV2} from "./SecMsGec"
 
 export type Voice = {
     Name: string;
@@ -63,7 +64,7 @@ type Options = {
 export class MsEdgeTTS {
     private static TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
     private static VOICES_URL = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=${MsEdgeTTS.TRUSTED_CLIENT_TOKEN}`
-    private static WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
+    private static WSS_URL = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
     private static JSON_XML_DELIM = "\r\n\r\n"
     private static AUDIO_DELIM = "Path:audio\r\n"
     private static VOICE_LANG_REGEX = /\b[a-z]{2,}-[A-Z]{2}\b/
@@ -110,7 +111,7 @@ export class MsEdgeTTS {
     private static async getSynthUrl(): Promise<string> {
         const req_id = MsEdgeTTS.generateUUID(); // Generate the request ID
         const secMsGEC = await MsEdgeTTS.generateSecMsGec(this.TRUSTED_CLIENT_TOKEN);
-        return `${this.WSS_URL}?Ocp-Apim-Subscription-Key=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=1-143.0.3650.96&ConnectionId=${req_id}`;
+        return `${this.WSS_URL}?TrustedClientToken=${this.TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${secMsGEC}&Sec-MS-GEC-Version=2-143.0.3650.96&ConnectionId=${req_id}`;
     }
 
     private _initClient(): Promise<void> {
@@ -318,15 +319,7 @@ export class MsEdgeTTS {
         const ticks = Math.floor((Date.now() + MsEdgeTTS._clockOffsetMs) / 1000) + 11644473600
         const rounded = ticks - (ticks % 300)
         const windowsTicks = rounded * 10000000
-
-        const encoder = new TextEncoder()
-        const data = encoder.encode(`${windowsTicks}${trustedClientToken}`)
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('')
-            .toUpperCase()
+        return hashSecMsGecV2(`${windowsTicks}${trustedClientToken}`)
     }
 
     private async _send(message, requestId?: string, initialSocket?: WebSocket) {
